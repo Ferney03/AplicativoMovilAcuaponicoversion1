@@ -11,33 +11,73 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native"
+import { MaterialIcons } from "@expo/vector-icons"
+import { authService } from "../config/authApi"
+import { useAuth } from "../context/authContext"
 
 interface LoginScreenProps {
-  onLogin: (email: string) => void
   navigation?: any
 }
 
-export default function LoginScreen({ onLogin, navigation }: LoginScreenProps) {
+export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const { login } = useAuth()
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (email.trim() === "" || password.trim() === "") {
       Alert.alert("Error", "Por favor ingresa email y contraseña")
       return
     }
 
-    // Simulación de login básico
-    if (email.includes("@") && password.length >= 6) {
-      onLogin(email)
-    } else {
-      Alert.alert("Error", "Credenciales inválidas")
+    setLoading(true)
+
+    try {
+      console.log("🔐 Intentando login con:", email)
+      console.log("🔐 Contraseña ingresada:", password)
+
+      // Mostrar hash de la contraseña para debugging
+      const hashTest = authService.testPasswordHash(password)
+      console.log("🔐 Hash generado:", hashTest)
+
+      const { usuario, actividades } = await authService.login(email, password)
+
+      console.log("✅ Login exitoso:", usuario.nombre, usuario.apellido)
+      console.log("🎯 Actividades asignadas:", actividades.length)
+
+      await login(usuario, actividades)
+
+      Alert.alert(
+        "✅ Bienvenido",
+        `Hola ${usuario.nombre} ${usuario.apellido}\n\nTienes acceso a ${actividades.length} actividades`,
+      )
+    } catch (error: any) {
+      console.error("❌ Error en login:", error)
+
+      const errorMessage = error.message || "No se pudo iniciar sesión"
+
+      const alertButtons: Array<{ text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }> =
+        [
+          {
+            text: "Cerrar",
+            style: "cancel",
+          },
+        ]
+
+      Alert.alert("Error de Autenticación", errorMessage, alertButtons)
+    } finally {
+      setLoading(false)
     }
   }
 
   const handleForgotPassword = () => {
-    navigation?.navigate("ForgotPassword")
+    if (navigation) {
+      navigation.navigate("ForgotPassword")
+    }
   }
 
   return (
@@ -55,36 +95,55 @@ export default function LoginScreen({ onLogin, navigation }: LoginScreenProps) {
       </View>
 
       <View style={styles.loginCard}>
-        <Text style={styles.loginTitle}>Login</Text>
+        <Text style={styles.loginTitle}>Iniciar Sesión</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>EMAIL</Text>
-          <TextInput
-            style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="email@ucundinamarca.edu.co"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+          <Text style={styles.label}>CORREO ELECTRÓNICO</Text>
+          <View style={styles.inputWrapper}>
+            <MaterialIcons name="email" size={20} color="#666" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="correo@gmail.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!loading}
+            />
+          </View>
         </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>CONTRASEÑA</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="password"
-            secureTextEntry
-          />
+          <View style={styles.inputWrapper}>
+            <MaterialIcons name="lock" size={20} color="#666" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Ingresa tu contraseña"
+              secureTextEntry={!showPassword}
+              editable={!loading}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+              <MaterialIcons name={showPassword ? "visibility" : "visibility-off"} size={20} color="#666" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+        <TouchableOpacity
+          style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword}>
+        <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword} disabled={loading}>
           <Text style={styles.forgotPasswordText}>¿Problemas para iniciar sesión?</Text>
         </TouchableOpacity>
       </View>
@@ -144,24 +203,39 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#333",
   },
-  input: {
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#4DB6AC",
     borderRadius: 8,
+    paddingHorizontal: 15,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
     padding: 15,
     fontSize: 16,
     color: "#333",
+  },
+  eyeIcon: {
+    padding: 5,
   },
   loginButton: {
     backgroundColor: "#00897B",
     borderRadius: 8,
     padding: 15,
     marginTop: 10,
+    alignItems: "center",
+  },
+  loginButtonDisabled: {
+    backgroundColor: "#B0BEC5",
   },
   loginButtonText: {
     color: "white",
     fontSize: 18,
     fontWeight: "bold",
-    textAlign: "center",
   },
   forgotPassword: {
     marginTop: 20,

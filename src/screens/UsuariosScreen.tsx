@@ -1,68 +1,19 @@
 "use client"
 
-import { useState } from "react"
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from "react-native"
+import { useState, useEffect } from "react"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
+import { authService, type Usuario as UsuarioAPI } from "../config/authApi"
 
-// Datos simplificados de usuarios registrados
-const USUARIOS_REGISTRADOS = [
-  {
-    id: 1,
-    nombre: "Carlos",
-    apellido: "Rodríguez",
-    email: "carlos.rodriguez@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-  {
-    id: 2,
-    nombre: "María",
-    apellido: "González",
-    email: "maria.gonzalez@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-  {
-    id: 3,
-    nombre: "Juan",
-    apellido: "Martínez",
-    email: "juan.martinez@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-  {
-    id: 4,
-    nombre: "Ana",
-    apellido: "López",
-    email: "ana.lopez@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-  {
-    id: 5,
-    nombre: "Pedro",
-    apellido: "Sánchez",
-    email: "pedro.sanchez@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-  {
-    id: 6,
-    nombre: "Laura",
-    apellido: "García",
-    email: "laura.garcia@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-  {
-    id: 7,
-    nombre: "Miguel",
-    apellido: "Torres",
-    email: "miguel.torres@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-  {
-    id: 8,
-    nombre: "Carmen",
-    apellido: "Ruiz",
-    email: "carmen.ruiz@ucundinamarca.edu.co",
-    upa: "El Vergel",
-  },
-]
+interface Usuario {
+  id: string
+  nombre: string
+  apellido: string
+  email: string
+  upa: string
+  fechaRegistro?: string
+  activo: boolean
+}
 
 interface UsuariosScreenProps {
   navigation: any
@@ -70,15 +21,81 @@ interface UsuariosScreenProps {
 
 export default function UsuariosScreen({ navigation }: UsuariosScreenProps) {
   const [searchText, setSearchText] = useState("")
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    cargarUsuarios()
+  }, [])
+
+  const cargarUsuarios = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      console.log("👥 Cargando usuarios desde API de autenticación...")
+
+      // Usar el servicio de autenticación que ya funciona
+      const usuariosAPI = await authService.getUsuarios()
+      console.log(`✅ Usuarios obtenidos de la API: ${usuariosAPI.length}`)
+
+      // Obtener UPAs para mostrar nombres en lugar de IDs
+      let upas: any[] = []
+      try {
+        upas = await authService.getUpas()
+        console.log(`✅ UPAs obtenidas: ${upas.length}`)
+      } catch (upaError) {
+        console.warn("⚠️ No se pudieron cargar las UPAs:", upaError)
+      }
+
+      // Formatear usuarios para la interfaz
+      const usuariosFormateados: Usuario[] = usuariosAPI.map((usuario: UsuarioAPI) => {
+        // Buscar el nombre de la UPA
+        const upa = upas.find((u) => u.idUpa === usuario.upaId)
+        const nombreUpa = upa ? upa.nombre : "UPA Desconocida"
+
+        return {
+          id: usuario.idUsuario,
+          nombre: usuario.nombre,
+          apellido: usuario.apellido,
+          email: usuario.correo,
+          upa: nombreUpa,
+          activo: usuario.estado,
+          fechaRegistro: undefined, // La API no proporciona fecha de registro
+        }
+      })
+
+      setUsuarios(usuariosFormateados)
+      console.log(`✅ Usuarios formateados: ${usuariosFormateados.length}`)
+    } catch (error: any) {
+      console.error("❌ Error cargando usuarios:", error)
+      setError(`Error al cargar usuarios: ${error.message}`)
+
+      // Sin datos de fallback - mostrar error real
+      setUsuarios([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Filtrar usuarios basado en la búsqueda
-  const usuariosFiltrados = USUARIOS_REGISTRADOS.filter(
+  const usuariosFiltrados = usuarios.filter(
     (usuario) =>
       usuario.nombre.toLowerCase().includes(searchText.toLowerCase()) ||
       usuario.apellido.toLowerCase().includes(searchText.toLowerCase()) ||
       usuario.email.toLowerCase().includes(searchText.toLowerCase()) ||
       usuario.upa.toLowerCase().includes(searchText.toLowerCase()),
   )
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2E7D32" />
+        <Text style={styles.loadingText}>Cargando usuarios desde la base de datos...</Text>
+      </View>
+    )
+  }
 
   return (
     <View style={styles.container}>
@@ -87,8 +104,20 @@ export default function UsuariosScreen({ navigation }: UsuariosScreenProps) {
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.title}>Usuarios Registrados</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity style={styles.refreshButton} onPress={cargarUsuarios}>
+          <MaterialIcons name="refresh" size={24} color="white" />
+        </TouchableOpacity>
       </View>
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="warning" size={20} color="#F44336" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={cargarUsuarios}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Barra de búsqueda */}
       <View style={styles.searchContainer}>
@@ -113,12 +142,12 @@ export default function UsuariosScreen({ navigation }: UsuariosScreenProps) {
           <Text style={styles.statLabel}>{searchText ? "Encontrados" : "Total Usuarios"}</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>1</Text>
-          <Text style={styles.statLabel}>UPA Activa</Text>
+          <Text style={styles.statNumber}>{usuarios.filter((u) => u.activo).length}</Text>
+          <Text style={styles.statLabel}>Activos</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>100%</Text>
-          <Text style={styles.statLabel}>El Vergel</Text>
+          <Text style={styles.statNumber}>{new Set(usuarios.map((u) => u.upa)).size}</Text>
+          <Text style={styles.statLabel}>UPAs</Text>
         </View>
       </View>
 
@@ -130,6 +159,11 @@ export default function UsuariosScreen({ navigation }: UsuariosScreenProps) {
               <View style={styles.userHeader}>
                 <View style={styles.userIcon}>
                   <MaterialIcons name="account-circle" size={40} color="#2E7D32" />
+                  {!usuario.activo && (
+                    <View style={styles.inactiveIndicator}>
+                      <MaterialIcons name="block" size={16} color="#F44336" />
+                    </View>
+                  )}
                 </View>
                 <View style={styles.userInfo}>
                   <Text style={styles.userName}>
@@ -140,6 +174,12 @@ export default function UsuariosScreen({ navigation }: UsuariosScreenProps) {
                     <MaterialIcons name="location-on" size={16} color="#4CAF50" />
                     <Text style={styles.upaText}>UPA: {usuario.upa}</Text>
                   </View>
+                  <Text style={styles.userIdText}>ID: {usuario.id.substring(0, 8)}...</Text>
+                </View>
+                <View style={styles.statusContainer}>
+                  <View style={[styles.statusIndicator, { backgroundColor: usuario.activo ? "#4CAF50" : "#F44336" }]}>
+                    <Text style={styles.statusText}>{usuario.activo ? "Activo" : "Inactivo"}</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -147,8 +187,20 @@ export default function UsuariosScreen({ navigation }: UsuariosScreenProps) {
         ) : (
           <View style={styles.noResultsContainer}>
             <MaterialIcons name="search-off" size={48} color="#999" />
-            <Text style={styles.noResultsText}>No se encontraron usuarios</Text>
-            <Text style={styles.noResultsSubtext}>Intenta con otros términos de búsqueda</Text>
+            <Text style={styles.noResultsText}>
+              {error
+                ? "Error al cargar usuarios"
+                : searchText
+                  ? "No se encontraron usuarios"
+                  : "No hay usuarios registrados"}
+            </Text>
+            <Text style={styles.noResultsSubtext}>
+              {error
+                ? "Verifica la conexión con la API"
+                : searchText
+                  ? "Intenta con otros términos de búsqueda"
+                  : "La base de datos está vacía"}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -160,6 +212,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#2E7D32",
   },
   header: {
     backgroundColor: "#2E7D32",
@@ -176,8 +239,35 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
-  placeholder: {
-    width: 34,
+  refreshButton: {
+    padding: 5,
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    margin: 20,
+    padding: 15,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: "#F44336",
+  },
+  errorText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: "#F44336",
+    flex: 1,
+  },
+  retryButton: {
+    backgroundColor: "#F44336",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   searchContainer: {
     flexDirection: "row",
@@ -250,6 +340,15 @@ const styles = StyleSheet.create({
   },
   userIcon: {
     marginRight: 15,
+    position: "relative",
+  },
+  inactiveIndicator: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    backgroundColor: "white",
+    borderRadius: 10,
+    padding: 2,
   },
   userInfo: {
     flex: 1,
@@ -275,6 +374,24 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginLeft: 4,
   },
+  userIdText: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 4,
+  },
+  statusContainer: {
+    alignItems: "flex-end",
+  },
+  statusIndicator: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
   noResultsContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -290,5 +407,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#999",
     marginTop: 5,
+    textAlign: "center",
   },
 })

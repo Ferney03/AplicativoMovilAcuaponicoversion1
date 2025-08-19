@@ -1,3 +1,5 @@
+"use client"
+
 import type React from "react"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { MaterialIcons } from "@expo/vector-icons"
@@ -6,25 +8,24 @@ import CultivosScreen from "../screens/CultivosScreen"
 import TanquesScreen from "../screens/TanquesScreen"
 import OpcionesScreen from "../screens/OpcionesScreen"
 import UserHeader from "../components/UserHeader"
+import { useAuth } from "../context/authContext"
 
 const Tab = createBottomTabNavigator()
 
 // Wrapper para incluir el header de usuario en cada pantalla
-function ScreenWithUserHeader({ children, userEmail }: { children: React.ReactNode; userEmail?: string }) {
+function ScreenWithUserHeader({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   return (
     <View style={{ flex: 1 }}>
-      <UserHeader userEmail={userEmail} />
+      <UserHeader userEmail={user?.correo} userName={`${user?.nombre} ${user?.apellido}`} />
       {children}
     </View>
   )
 }
 
-interface MainTabNavigatorProps {
-  userEmail: string
-  onLogout: () => void
-}
+export default function MainTabNavigator() {
+  const { hasActivity } = useAuth()
 
-export default function MainTabNavigator({ userEmail, onLogout }: MainTabNavigatorProps) {
   return (
     <Tab.Navigator
       screenOptions={{
@@ -45,30 +46,36 @@ export default function MainTabNavigator({ userEmail, onLogout }: MainTabNavigat
         },
       }}
     >
-      <Tab.Screen
-        name="Cultivos"
-        options={{
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="eco" size={size} color={color} />,
-        }}
-      >
-        {({ navigation }) => (
-          <ScreenWithUserHeader userEmail={userEmail}>
-            <CultivosScreen navigation={navigation} />
-          </ScreenWithUserHeader>
-        )}
-      </Tab.Screen>
-      <Tab.Screen
-        name="Tanques/Peces"
-        options={{
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="waves" size={size} color={color} />,
-        }}
-      >
-        {({ navigation }) => (
-          <ScreenWithUserHeader userEmail={userEmail}>
-            <TanquesScreen navigation={navigation} />
-          </ScreenWithUserHeader>
-        )}
-      </Tab.Screen>
+      {hasActivity("Monitoreo Modulo Cultivos") && (
+        <Tab.Screen
+          name="Cultivos"
+          options={{
+            tabBarIcon: ({ color, size }) => <MaterialIcons name="eco" size={size} color={color} />,
+          }}
+        >
+          {({ navigation }) => (
+            <ScreenWithUserHeader>
+              <CultivosScreen navigation={navigation} />
+            </ScreenWithUserHeader>
+          )}
+        </Tab.Screen>
+      )}
+
+      {hasActivity("Monitoreo Modulo Tanques") && (
+        <Tab.Screen
+          name="Tanques/Peces"
+          options={{
+            tabBarIcon: ({ color, size }) => <MaterialIcons name="waves" size={size} color={color} />,
+          }}
+        >
+          {({ navigation }) => (
+            <ScreenWithUserHeader>
+              <TanquesScreen navigation={navigation} />
+            </ScreenWithUserHeader>
+          )}
+        </Tab.Screen>
+      )}
+
       <Tab.Screen
         name="Opciones"
         options={{
@@ -76,8 +83,8 @@ export default function MainTabNavigator({ userEmail, onLogout }: MainTabNavigat
         }}
       >
         {({ navigation }) => (
-          <ScreenWithUserHeader userEmail={userEmail}>
-            <OpcionesScreen onLogout={onLogout} navigation={navigation} />
+          <ScreenWithUserHeader>
+            <OpcionesScreen navigation={navigation} />
           </ScreenWithUserHeader>
         )}
       </Tab.Screen>

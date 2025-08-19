@@ -1,22 +1,25 @@
-import { Platform } from "react-native"
+import Constants from "expo-constants"
 
 // Configuración para usar datos simulados o reales
 const USE_MOCK_DATA = false // ✅ CAMBIADO A FALSE PARA USAR DATOS REALES
 
 // Configuración automática de API basada en la plataforma
 const getApiBaseUrl = () => {
-  if (Platform.OS === "web") {
+  // Usar Constants.executionEnvironment para detectar plataforma
+  const isWeb = Constants.executionEnvironment === "storeClient" ? false : true
+
+  if (isWeb && typeof window !== "undefined") {
     // En web browser, usar HTTP con puerto 55839
     return "http://localhost:55839"
   } else {
     // En móvil, usar HTTP con puerto 55839
-    return "http://10.157.8.131:55839"
+    return "http://192.168.101.76:55839"
   }
 }
 
 export const API_BASE_URL = getApiBaseUrl()
 
-console.log(`🔧 API Base URL configurada: ${API_BASE_URL} (Platform: ${Platform.OS})`)
+console.log(`🔧 API Base URL configurada: ${API_BASE_URL}`)
 
 // Función para probar conectividad
 export const testConnection = async (): Promise<boolean> => {
@@ -64,6 +67,6 @@ export const LECHUGAS_ENDPOINTS = {
   ph: `${API_BASE_URL}/api/lechugas/ph/latest`,
   // Endpoints de rango para datos históricos
   range: `${API_BASE_URL}/api/lechugas/range`,
-  // Nuevo endpoint para datos diarios
+  // Endpoint corregido para datos diarios de lechugas
   diarioUltimo: `${API_BASE_URL}/api/graphics/lechugas/diario-ultimo`,
 }

@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
+import { truchasService, lechugasService } from "../services/apiService"
 
 interface AlertaAutomatica {
   id: string
@@ -15,119 +16,199 @@ interface AlertaAutomatica {
   descripcion: string
   icono: string
   color: string
+  severidad: "critica" | "alta" | "media" | "baja"
 }
 
 interface AlertasScreenProps {
   navigation: any
 }
 
+// Límites SOLO para variables ambientales (NO crecimiento ni área foliar)
+const LIMITES_TRUCHAS = {
+  temperatura: { min: 10, max: 18 }, // °C
+  conductividad: { min: 150, max: 300 }, // μS/cm
+  ph: { min: 6.5, max: 8.0 },
+}
+
+const LIMITES_LECHUGAS = {
+  temperatura: { min: 18, max: 25 }, // °C
+  humedad: { min: 60, max: 85 }, // %
+  ph: { min: 5.5, max: 6.5 },
+}
+
 export default function AlertasScreen({ navigation }: AlertasScreenProps) {
   const [searchText, setSearchText] = useState("")
   const [alertas, setAlertas] = useState<AlertaAutomatica[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // Simular alertas automáticas del sistema
   useEffect(() => {
-    const alertasSimuladas: AlertaAutomatica[] = [
-      {
-        id: "alert_001",
-        modulo: "tanques",
-        variable: "pH",
-        valor: 8.5,
-        valorLimite: 8.0,
-        tipo: "alto",
-        timestamp: "2024-01-15 14:23:15",
-        descripcion: "pH del agua se elevó por encima del límite seguro",
-        icono: "science",
-        color: "#F44336",
-      },
-      {
-        id: "alert_002",
-        modulo: "cultivos",
-        variable: "Temperatura",
-        valor: 26.8,
-        valorLimite: 25.0,
-        tipo: "alto",
-        timestamp: "2024-01-15 13:45:22",
-        descripcion: "Temperatura ambiente excedió el rango óptimo",
-        icono: "thermostat",
-        color: "#FF9800",
-      },
-      {
-        id: "alert_003",
-        modulo: "tanques",
-        variable: "Conductividad",
-        valor: 135,
-        valorLimite: 150,
-        tipo: "bajo",
-        timestamp: "2024-01-15 12:10:08",
-        descripcion: "Conductividad del agua por debajo del mínimo",
-        icono: "electrical-services",
-        color: "#FF9800",
-      },
-      {
-        id: "alert_004",
-        modulo: "cultivos",
-        variable: "Humedad",
-        valor: 45,
-        valorLimite: 50,
-        tipo: "bajo",
-        timestamp: "2024-01-15 11:30:45",
-        descripcion: "Humedad relativa por debajo del rango recomendado",
-        icono: "water-drop",
-        color: "#2196F3",
-      },
-      {
-        id: "alert_005",
-        modulo: "tanques",
-        variable: "Temperatura",
-        valor: 9.2,
-        valorLimite: 10.0,
-        tipo: "bajo",
-        timestamp: "2024-01-15 10:15:33",
-        descripcion: "Temperatura del agua muy baja para truchas",
-        icono: "thermostat",
-        color: "#F44336",
-      },
-      {
-        id: "alert_006",
-        modulo: "cultivos",
-        variable: "pH",
-        valor: 5.2,
-        valorLimite: 5.5,
-        tipo: "bajo",
-        timestamp: "2024-01-15 09:22:17",
-        descripcion: "pH del sustrato por debajo del óptimo",
-        icono: "science",
-        color: "#9C27B0",
-      },
-      {
-        id: "alert_007",
-        modulo: "tanques",
-        variable: "pH",
-        valor: 8.3,
-        valorLimite: 8.0,
-        tipo: "alto",
-        timestamp: "2024-01-14 16:45:12",
-        descripcion: "pH del agua elevado - revisar sistema de filtración",
-        icono: "science",
-        color: "#F44336",
-      },
-      {
-        id: "alert_008",
-        modulo: "cultivos",
-        variable: "Temperatura",
-        valor: 17.5,
-        valorLimite: 18.0,
-        tipo: "bajo",
-        timestamp: "2024-01-14 15:30:28",
-        descripcion: "Temperatura ambiente baja - activar calefacción",
-        icono: "thermostat",
-        color: "#FF9800",
-      },
-    ]
+    cargarAlertasReales()
 
-    setAlertas(alertasSimuladas)
+    // Actualizar alertas cada 30 segundos
+    const interval = setInterval(cargarAlertasReales, 30000)
+    return () => clearInterval(interval)
   }, [])
+
+  const cargarAlertasReales = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      console.log("🚨 Cargando alertas reales desde la API...")
+
+      const alertasGeneradas: AlertaAutomatica[] = []
+
+      // Obtener datos actuales de truchas - SOLO VARIABLES AMBIENTALES
+      try {
+        const datosTruchas = await truchasService.getLatestValues()
+        console.log("🐟 Datos truchas obtenidos:", datosTruchas)
+
+        // Verificar SOLO variables ambientales de truchas (NO longitud)
+        const verificarTruchas = [
+          {
+            key: "temperatura",
+            valor: datosTruchas.temperatura,
+            limites: LIMITES_TRUCHAS.temperatura,
+            unidad: "°C",
+            variable: "Temperatura",
+          },
+          {
+            key: "conductividad",
+            valor: datosTruchas.conductividad,
+            limites: LIMITES_TRUCHAS.conductividad,
+            unidad: "μS/cm",
+            variable: "Conductividad",
+          },
+          {
+            key: "ph",
+            valor: datosTruchas.ph,
+            limites: LIMITES_TRUCHAS.ph,
+            unidad: "",
+            variable: "pH",
+          },
+        ]
+
+        verificarTruchas.forEach((item) => {
+          if (item.valor < item.limites.min) {
+            alertasGeneradas.push({
+              id: `truchas_${item.key}_bajo_${Date.now()}`,
+              modulo: "tanques",
+              variable: item.variable,
+              valor: item.valor,
+              valorLimite: item.limites.min,
+              tipo: "bajo",
+              timestamp: new Date().toLocaleString(),
+              descripcion: `${item.variable} del agua por debajo del mínimo recomendado (${item.limites.min}${item.unidad})`,
+              icono: item.key === "temperatura" ? "thermostat" : item.key === "ph" ? "science" : "electrical-services",
+              color: "#F44336",
+              severidad: item.valor < item.limites.min * 0.8 ? "critica" : "alta",
+            })
+          } else if (item.valor > item.limites.max) {
+            alertasGeneradas.push({
+              id: `truchas_${item.key}_alto_${Date.now()}`,
+              modulo: "tanques",
+              variable: item.variable,
+              valor: item.valor,
+              valorLimite: item.limites.max,
+              tipo: "alto",
+              timestamp: new Date().toLocaleString(),
+              descripcion: `${item.variable} del agua por encima del máximo recomendado (${item.limites.max}${item.unidad})`,
+              icono: item.key === "temperatura" ? "thermostat" : item.key === "ph" ? "science" : "electrical-services",
+              color: "#FF9800",
+              severidad: item.valor > item.limites.max * 1.2 ? "critica" : "alta",
+            })
+          }
+        })
+      } catch (truchasError) {
+        console.error("❌ Error obteniendo datos de truchas:", truchasError)
+      }
+
+      // Obtener datos actuales de lechugas - SOLO VARIABLES AMBIENTALES
+      try {
+        const datosLechugas = await lechugasService.getLatestValues()
+        console.log("🥬 Datos lechugas obtenidos:", datosLechugas)
+
+        // Verificar SOLO variables ambientales de lechugas (NO altura ni área foliar)
+        const verificarLechugas = [
+          {
+            key: "temperatura",
+            valor: datosLechugas.temperatura,
+            limites: LIMITES_LECHUGAS.temperatura,
+            unidad: "°C",
+            variable: "Temperatura",
+          },
+          {
+            key: "humedad",
+            valor: datosLechugas.humedad,
+            limites: LIMITES_LECHUGAS.humedad,
+            unidad: "%",
+            variable: "Humedad",
+          },
+          {
+            key: "ph",
+            valor: datosLechugas.ph,
+            limites: LIMITES_LECHUGAS.ph,
+            unidad: "",
+            variable: "pH",
+          },
+        ]
+
+        verificarLechugas.forEach((item) => {
+          if (item.valor < item.limites.min) {
+            alertasGeneradas.push({
+              id: `lechugas_${item.key}_bajo_${Date.now()}`,
+              modulo: "cultivos",
+              variable: item.variable,
+              valor: item.valor,
+              valorLimite: item.limites.min,
+              tipo: "bajo",
+              timestamp: new Date().toLocaleString(),
+              descripcion: `${item.variable} del ambiente por debajo del mínimo recomendado (${item.limites.min}${item.unidad})`,
+              icono: item.key === "temperatura" ? "thermostat" : item.key === "ph" ? "science" : "water-drop",
+              color: "#F44336",
+              severidad: item.valor < item.limites.min * 0.8 ? "critica" : "alta",
+            })
+          } else if (item.valor > item.limites.max) {
+            alertasGeneradas.push({
+              id: `lechugas_${item.key}_alto_${Date.now()}`,
+              modulo: "cultivos",
+              variable: item.variable,
+              valor: item.valor,
+              valorLimite: item.limites.max,
+              tipo: "alto",
+              timestamp: new Date().toLocaleString(),
+              descripcion: `${item.variable} del ambiente por encima del máximo recomendado (${item.limites.max}${item.unidad})`,
+              icono: item.key === "temperatura" ? "thermostat" : item.key === "ph" ? "science" : "water-drop",
+              color: "#FF9800",
+              severidad: item.valor > item.limites.max * 1.2 ? "critica" : "alta",
+            })
+          }
+        })
+      } catch (lechugasError) {
+        console.error("❌ Error obteniendo datos de lechugas:", lechugasError)
+      }
+
+      // Ordenar alertas por severidad y timestamp
+      alertasGeneradas.sort((a, b) => {
+        const severidadOrder = { critica: 4, alta: 3, media: 2, baja: 1 }
+        return severidadOrder[b.severidad] - severidadOrder[a.severidad]
+      })
+
+      setAlertas(alertasGeneradas)
+      console.log(`✅ Alertas generadas: ${alertasGeneradas.length}`)
+
+      if (alertasGeneradas.length === 0) {
+        console.log("✅ No hay alertas - todas las variables ambientales están dentro de los rangos normales")
+      }
+    } catch (error: any) {
+      console.error("❌ Error cargando alertas:", error)
+      setError(`Error al cargar alertas: ${error.message}`)
+      setAlertas([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Filtrar alertas basado en la búsqueda
   const alertasFiltradas = alertas.filter(
@@ -146,23 +227,51 @@ export default function AlertasScreen({ navigation }: AlertasScreenProps) {
     return tipo === "alto" ? "trending-up" : "trending-down"
   }
 
-  const getAlertColor = (tipo: "alto" | "bajo") => {
-    return tipo === "alto" ? "#F44336" : "#FF9800"
+  const getAlertColor = (severidad: string) => {
+    switch (severidad) {
+      case "critica":
+        return "#D32F2F"
+      case "alta":
+        return "#F44336"
+      case "media":
+        return "#FF9800"
+      case "baja":
+        return "#2196F3"
+      default:
+        return "#FF9800"
+    }
+  }
+
+  const getSeveridadText = (severidad: string) => {
+    switch (severidad) {
+      case "critica":
+        return "🔴 CRÍTICA"
+      case "alta":
+        return "🟠 ALTA"
+      case "media":
+        return "🟡 MEDIA"
+      case "baja":
+        return "🔵 BAJA"
+      default:
+        return "🟡 MEDIA"
+    }
   }
 
   const handleAlertDetail = (alerta: AlertaAutomatica) => {
     Alert.alert(
-      `🚨 Alerta: ${alerta.variable}`,
-      `Módulo: ${alerta.modulo === "cultivos" ? "Cultivos" : "Tanques/Peces"}
+      `🚨 Alerta ${getSeveridadText(alerta.severidad)}`,
+      `Módulo: ${alerta.modulo === "cultivos" ? "Cultivos (Lechugas)" : "Tanques (Truchas)"}
       
 Variable: ${alerta.variable}
 Valor actual: ${alerta.valor}${alerta.variable === "Temperatura" ? "°C" : alerta.variable === "Humedad" ? "%" : alerta.variable === "Conductividad" ? " μS/cm" : ""}
-Límite: ${alerta.valorLimite}${alerta.variable === "Temperatura" ? "°C" : alerta.variable === "Humedad" ? "%" : alerta.variable === "Conductividad" ? " μS/cm" : ""}
-Tipo: ${alerta.tipo === "alto" ? "Valor Alto" : "Valor Bajo"}
+Límite ${alerta.tipo}: ${alerta.valorLimite}${alerta.variable === "Temperatura" ? "°C" : alerta.variable === "Humedad" ? "%" : alerta.variable === "Conductividad" ? " μS/cm" : ""}
+Severidad: ${getSeveridadText(alerta.severidad)}
 
 Fecha y hora: ${alerta.timestamp}
 
-Descripción: ${alerta.descripcion}`,
+Descripción: ${alerta.descripcion}
+
+⚠️ Recomendación: Revisar inmediatamente el sistema ${alerta.modulo === "cultivos" ? "de cultivos" : "de tanques"}.`,
       [
         {
           text: "Marcar como Revisada",
@@ -173,22 +282,43 @@ Descripción: ${alerta.descripcion}`,
     )
   }
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF9800" />
+        <Text style={styles.loadingText}>Analizando variables ambientales...</Text>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.title}>Alertas Automáticas</Text>
-        <View style={styles.placeholder} />
+        <Text style={styles.title}>Alertas Ambientales</Text>
+        <TouchableOpacity style={styles.refreshButton} onPress={cargarAlertasReales}>
+          <MaterialIcons name="refresh" size={24} color="white" />
+        </TouchableOpacity>
       </View>
+
+      {error && (
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="warning" size={20} color="#F44336" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={cargarAlertasReales}>
+            <Text style={styles.retryText}>Reintentar</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Barra de búsqueda */}
       <View style={styles.searchContainer}>
         <MaterialIcons name="search" size={20} color="#666" />
         <TextInput
           style={styles.searchInput}
-          placeholder="Buscar por módulo, variable o descripción..."
+          placeholder="Buscar por variable ambiental..."
           value={searchText}
           onChangeText={setSearchText}
         />
@@ -207,15 +337,13 @@ Descripción: ${alerta.descripcion}`,
         </View>
         <View style={styles.statCard}>
           <Text style={[styles.statNumber, { color: "#F44336" }]}>
-            {alertasFiltradas.filter((a) => a.tipo === "alto").length}
+            {alertasFiltradas.filter((a) => a.severidad === "critica" || a.severidad === "alta").length}
           </Text>
-          <Text style={styles.statLabel}>Valores Altos</Text>
+          <Text style={styles.statLabel}>Críticas/Altas</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#FF9800" }]}>
-            {alertasFiltradas.filter((a) => a.tipo === "bajo").length}
-          </Text>
-          <Text style={styles.statLabel}>Valores Bajos</Text>
+          <Text style={[styles.statNumber, { color: "#4CAF50" }]}>{alertasFiltradas.length === 0 ? "OK" : "⚠️"}</Text>
+          <Text style={styles.statLabel}>Estado</Text>
         </View>
       </View>
 
@@ -225,19 +353,28 @@ Descripción: ${alerta.descripcion}`,
             {/* Sección Cultivos */}
             {alertasCultivos.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>🥬 Alertas de Cultivos ({alertasCultivos.length})</Text>
+                <Text style={styles.sectionTitle}>🥬 Alertas Ambientales - Cultivos ({alertasCultivos.length})</Text>
                 {alertasCultivos.map((alerta) => (
-                  <TouchableOpacity key={alerta.id} style={styles.alertCard} onPress={() => handleAlertDetail(alerta)}>
+                  <TouchableOpacity
+                    key={alerta.id}
+                    style={[styles.alertCard, { borderLeftColor: getAlertColor(alerta.severidad) }]}
+                    onPress={() => handleAlertDetail(alerta)}
+                  >
                     <View style={styles.alertHeader}>
-                      <View style={[styles.alertIcon, { backgroundColor: getAlertColor(alerta.tipo) + "20" }]}>
+                      <View style={[styles.alertIcon, { backgroundColor: getAlertColor(alerta.severidad) + "20" }]}>
                         <MaterialIcons
                           name={getAlertIcon(alerta.tipo) as any}
                           size={24}
-                          color={getAlertColor(alerta.tipo)}
+                          color={getAlertColor(alerta.severidad)}
                         />
                       </View>
                       <View style={styles.alertInfo}>
-                        <Text style={styles.alertVariable}>{alerta.variable}</Text>
+                        <View style={styles.alertTitleRow}>
+                          <Text style={styles.alertVariable}>{alerta.variable}</Text>
+                          <Text style={[styles.severidadBadge, { backgroundColor: getAlertColor(alerta.severidad) }]}>
+                            {getSeveridadText(alerta.severidad)}
+                          </Text>
+                        </View>
                         <Text style={styles.alertValue}>
                           Valor: {alerta.valor}
                           {alerta.variable === "Temperatura"
@@ -247,7 +384,7 @@ Descripción: ${alerta.descripcion}`,
                               : alerta.variable === "Conductividad"
                                 ? " μS/cm"
                                 : ""}{" "}
-                          <Text style={{ color: getAlertColor(alerta.tipo) }}>
+                          <Text style={{ color: getAlertColor(alerta.severidad) }}>
                             ({alerta.tipo === "alto" ? "↑" : "↓"} Límite: {alerta.valorLimite})
                           </Text>
                         </Text>
@@ -264,19 +401,28 @@ Descripción: ${alerta.descripcion}`,
             {/* Sección Tanques */}
             {alertasTanques.length > 0 && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>🐟 Alertas de Tanques/Peces ({alertasTanques.length})</Text>
+                <Text style={styles.sectionTitle}>🐟 Alertas Ambientales - Tanques ({alertasTanques.length})</Text>
                 {alertasTanques.map((alerta) => (
-                  <TouchableOpacity key={alerta.id} style={styles.alertCard} onPress={() => handleAlertDetail(alerta)}>
+                  <TouchableOpacity
+                    key={alerta.id}
+                    style={[styles.alertCard, { borderLeftColor: getAlertColor(alerta.severidad) }]}
+                    onPress={() => handleAlertDetail(alerta)}
+                  >
                     <View style={styles.alertHeader}>
-                      <View style={[styles.alertIcon, { backgroundColor: getAlertColor(alerta.tipo) + "20" }]}>
+                      <View style={[styles.alertIcon, { backgroundColor: getAlertColor(alerta.severidad) + "20" }]}>
                         <MaterialIcons
                           name={getAlertIcon(alerta.tipo) as any}
                           size={24}
-                          color={getAlertColor(alerta.tipo)}
+                          color={getAlertColor(alerta.severidad)}
                         />
                       </View>
                       <View style={styles.alertInfo}>
-                        <Text style={styles.alertVariable}>{alerta.variable}</Text>
+                        <View style={styles.alertTitleRow}>
+                          <Text style={styles.alertVariable}>{alerta.variable}</Text>
+                          <Text style={[styles.severidadBadge, { backgroundColor: getAlertColor(alerta.severidad) }]}>
+                            {getSeveridadText(alerta.severidad)}
+                          </Text>
+                        </View>
                         <Text style={styles.alertValue}>
                           Valor: {alerta.valor}
                           {alerta.variable === "Temperatura"
@@ -286,8 +432,8 @@ Descripción: ${alerta.descripcion}`,
                               : alerta.variable === "Conductividad"
                                 ? " μS/cm"
                                 : ""}{" "}
-                          <Text style={{ color: getAlertColor(alerta.tipo) }}>
-                            ({alerta.tipo === "alto" ? "↑" : "���"} Límite: {alerta.valorLimite})
+                          <Text style={{ color: getAlertColor(alerta.severidad) }}>
+                            ({alerta.tipo === "alto" ? "↑" : "↓"} Límite: {alerta.valorLimite})
                           </Text>
                         </Text>
                         <Text style={styles.alertDescription}>{alerta.descripcion}</Text>
@@ -302,12 +448,20 @@ Descripción: ${alerta.descripcion}`,
           </>
         ) : (
           <View style={styles.noResultsContainer}>
-            <MaterialIcons name="notifications-off" size={48} color="#999" />
-            <Text style={styles.noResultsText}>
-              {searchText ? "No se encontraron alertas" : "No hay alertas automáticas"}
+            <MaterialIcons name={error ? "error" : "check-circle"} size={48} color={error ? "#F44336" : "#4CAF50"} />
+            <Text style={[styles.noResultsText, { color: error ? "#F44336" : "#4CAF50" }]}>
+              {error
+                ? "Error al cargar alertas"
+                : searchText
+                  ? "No se encontraron alertas"
+                  : "✅ Variables ambientales normales"}
             </Text>
             <Text style={styles.noResultsSubtext}>
-              {searchText ? "Intenta con otros términos de búsqueda" : "El sistema está funcionando correctamente"}
+              {error
+                ? "Verifica la conexión con la API"
+                : searchText
+                  ? "Intenta con otros términos de búsqueda"
+                  : "pH, temperatura, conductividad y humedad están en rangos óptimos"}
             </Text>
           </View>
         )}
@@ -320,6 +474,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F5F5F5",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#FF9800",
   },
   header: {
     backgroundColor: "#FF9800",
@@ -336,8 +501,35 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
   },
-  placeholder: {
-    width: 34,
+  refreshButton: {
+    padding: 5,
+  },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    margin: 20,
+    padding: 15,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: "#F44336",
+  },
+  errorText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: "#F44336",
+    flex: 1,
+  },
+  retryButton: {
+    backgroundColor: "#F44336",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retryText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   searchContainer: {
     flexDirection: "row",
@@ -412,6 +604,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderLeftWidth: 4,
   },
   alertHeader: {
     flexDirection: "row",
@@ -425,10 +618,26 @@ const styles = StyleSheet.create({
   alertInfo: {
     flex: 1,
   },
+  alertTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
   alertVariable: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+    flex: 1,
+  },
+  severidadBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+    fontSize: 10,
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
   },
   alertValue: {
     fontSize: 14,
@@ -455,7 +664,6 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#999",
     marginTop: 15,
   },
   noResultsSubtext: {

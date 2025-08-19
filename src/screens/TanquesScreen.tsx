@@ -6,6 +6,7 @@ import { LineChart } from "react-native-chart-kit"
 import { Dimensions } from "react-native"
 import { truchasService } from "../services/apiService"
 import { MaterialIcons } from "@expo/vector-icons"
+import { useAuth } from "../context/authContext"
 
 const screenWidth = Dimensions.get("window").width
 
@@ -27,6 +28,7 @@ interface TanquesScreenProps {
 }
 
 export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
+  const { user } = useAuth()
   const [data, setData] = useState<TruchaDisplayData>({
     longitud: 0,
     temperatura: 0,
@@ -41,6 +43,18 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
     ph: [],
   })
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
+
+  // Verificar acceso según el dominio del correo
+  const isUcundinamarcaUser = user?.correo?.endsWith("@ucundinamarca.edu.co") || false
+  const isGmailUser = user?.correo?.endsWith("@gmail.com") || false
+
+  // Solo usuarios institucionales tienen acceso a modelos
+  const hasModelAccess = isUcundinamarcaUser
+
+  console.log(`🔍 TanquesScreen - Usuario: ${user?.correo}`)
+  console.log(`🎓 Ucundinamarca: ${isUcundinamarcaUser} (acceso completo)`)
+  console.log(`📧 Gmail: ${isGmailUser} (solo visualización)`)
+  console.log(`📊 Acceso a modelos: ${hasModelAccess}`)
 
   const fetchData = async () => {
     try {
@@ -68,12 +82,7 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
     } catch (error) {
       console.error("❌ Error fetching truchas data:", error)
       setIsConnected(false)
-      let errorMessage = "Error desconocido"
-      if (error instanceof Error) {
-        errorMessage = error.message
-      } else if (typeof error === "string") {
-        errorMessage = error
-      }
+      const errorMessage = (error instanceof Error) ? error.message : String(error)
       Alert.alert(
         "Error de Conexión - Truchas",
         `No se pudieron obtener los datos.\n\nDetalles del error:\n${errorMessage}\n\nVerifica:\n• Tu API esté corriendo en puerto 55839\n• La conexión de red\n• El firewall`,
@@ -93,16 +102,114 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
     setRefreshing(false)
   }
 
-  const chartConfig = {
-    backgroundColor: "#1565C0",
-    backgroundGradientFrom: "#2196F3",
-    backgroundGradientTo: "#1565C0",
+  const handleModeloRegresion = () => {
+    if (!hasModelAccess) {
+      Alert.alert(
+        "Acceso Restringido",
+        "Los modelos de regresión solo están disponibles para usuarios institucionales (@ucundinamarca.edu.co)",
+      )
+      return
+    }
+
+    // Solo un modelo unificado
+    navigation?.navigate("PrediccionTruchasAvanzada")
+  }
+
+  const handleModeloSeriesTemporales = () => {
+    if (!hasModelAccess) {
+      Alert.alert(
+        "Acceso Restringido",
+        "Los modelos de series temporales solo están disponibles para usuarios institucionales (@ucundinamarca.edu.co)",
+      )
+      return
+    }
+
+    navigation?.navigate("PrediccionTruchasSARIMA")
+  }
+
+  // Configuraciones de gráficos estilo Tableau/PowerBI
+  const temperaturaChartConfig = {
+    backgroundColor: "#E53E3E",
+    backgroundGradientFrom: "#FC8181",
+    backgroundGradientFromOpacity: 1,
+    backgroundGradientTo: "#C53030",
+    backgroundGradientToOpacity: 0.8,
     decimalPlaces: 1,
     color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
     labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
     style: {
-      borderRadius: 16,
+      borderRadius: 20,
     },
+    propsForDots: {
+      r: "6",
+      strokeWidth: "3",
+      stroke: "#ffffff",
+      fill: "#FED7D7",
+    },
+    propsForBackgroundLines: {
+      strokeDasharray: "5,5",
+      stroke: "rgba(255,255,255,0.3)",
+      strokeWidth: 1,
+    },
+    strokeWidth: 4,
+    fillShadowGradient: "#FED7D7",
+    fillShadowGradientOpacity: 0.3,
+  }
+
+  const conductividadChartConfig = {
+    backgroundColor: "#D69E2E",
+    backgroundGradientFrom: "#F6E05E",
+    backgroundGradientFromOpacity: 1,
+    backgroundGradientTo: "#B7791F",
+    backgroundGradientToOpacity: 0.9,
+    decimalPlaces: 0,
+    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    style: {
+      borderRadius: 20,
+    },
+    propsForDots: {
+      r: "6",
+      strokeWidth: "3",
+      stroke: "#ffffff",
+      fill: "#FEFCBF",
+    },
+    propsForBackgroundLines: {
+      strokeDasharray: "5,5",
+      stroke: "rgba(255,255,255,0.3)",
+      strokeWidth: 1,
+    },
+    strokeWidth: 4,
+    fillShadowGradient: "#FEFCBF",
+    fillShadowGradientOpacity: 0.3,
+  }
+
+  const phChartConfig = {
+    backgroundColor: "#805AD5",
+    backgroundGradientFrom: "#B794F6",
+    backgroundGradientFromOpacity: 1,
+    backgroundGradientTo: "#553C9A",
+    backgroundGradientToOpacity: 0.9,
+    decimalPlaces: 2,
+    color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    style: {
+      borderRadius: 20,
+    },
+    propsForDots: {
+      r: "6",
+      strokeWidth: "3",
+      stroke: "#ffffff",
+      fill: "#E9D8FD",
+    },
+    propsForBackgroundLines: {
+      strokeDasharray: "5,5",
+      stroke: "rgba(255,255,255,0.3)",
+      strokeWidth: 1,
+    },
+    strokeWidth: 4,
+    fillShadowGradient: "#E9D8FD",
+    fillShadowGradientOpacity: 0.3,
   }
 
   const getConnectionStatus = () => {
@@ -134,95 +241,177 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
       </View>
 
       <View style={styles.metricsContainer}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricValue}>{data.longitud.toFixed(1)} cm</Text>
+        <View style={[styles.metricCard, styles.longitudCard]}>
+          <MaterialIcons name="straighten" size={32} color="#1565C0" />
+          <Text style={[styles.metricValue, { color: "#1565C0" }]}>{data.longitud.toFixed(1)} cm</Text>
           <Text style={styles.metricLabel}>Longitud</Text>
         </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricValue}>{data.temperatura.toFixed(1)}°C</Text>
+        <View style={[styles.metricCard, styles.tempCard]}>
+          <MaterialIcons name="thermostat" size={32} color="#E53E3E" />
+          <Text style={[styles.metricValue, { color: "#E53E3E" }]}>{data.temperatura.toFixed(1)}°C</Text>
           <Text style={styles.metricLabel}>Temperatura</Text>
         </View>
       </View>
 
       <View style={styles.metricsContainer}>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricValue}>{data.conductividad.toFixed(0)} μS/cm</Text>
+        <View style={[styles.metricCard, styles.conductividadCard]}>
+          <MaterialIcons name="electrical-services" size={32} color="#D69E2E" />
+          <Text style={[styles.metricValue, { color: "#D69E2E" }]}>{data.conductividad.toFixed(0)} μS/cm</Text>
           <Text style={styles.metricLabel}>Conductividad</Text>
         </View>
-        <View style={styles.metricCard}>
-          <Text style={styles.metricValue}>{data.ph.toFixed(2)}</Text>
+        <View style={[styles.metricCard, styles.phCard]}>
+          <MaterialIcons name="science" size={32} color="#805AD5" />
+          <Text style={[styles.metricValue, { color: "#805AD5" }]}>{data.ph.toFixed(2)}</Text>
           <Text style={styles.metricLabel}>pH</Text>
         </View>
       </View>
 
       {history.temperatura.length > 1 && (
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Temperatura del Agua - Tiempo Real</Text>
+          <View style={styles.chartHeader}>
+            <MaterialIcons name="thermostat" size={24} color="#E53E3E" />
+            <Text style={styles.chartTitle}>Temperatura del Agua - Tiempo Real</Text>
+          </View>
           <LineChart
             data={{
               labels: history.temperatura.map((_, i) => `${i + 1}`),
-              datasets: [{ data: history.temperatura }],
+              datasets: [
+                {
+                  data: history.temperatura,
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  strokeWidth: 4,
+                },
+              ],
             }}
             width={screenWidth - 40}
-            height={220}
-            chartConfig={chartConfig}
+            height={240}
+            chartConfig={temperaturaChartConfig}
             bezier
             style={styles.chart}
+            withShadow={true}
+            withDots={true}
+            withInnerLines={true}
+            withOuterLines={true}
+            withVerticalLines={true}
+            withHorizontalLines={true}
           />
+          <View style={styles.chartFooter}>
+            <Text style={styles.chartSubtitle}>🌡️ Control térmico del hábitat</Text>
+          </View>
         </View>
       )}
 
       {history.conductividad.length > 1 && (
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Conductividad - Tiempo Real</Text>
+          <View style={styles.chartHeader}>
+            <MaterialIcons name="electrical-services" size={24} color="#D69E2E" />
+            <Text style={styles.chartTitle}>Conductividad - Tiempo Real</Text>
+          </View>
           <LineChart
             data={{
               labels: history.conductividad.map((_, i) => `${i + 1}`),
-              datasets: [{ data: history.conductividad }],
+              datasets: [
+                {
+                  data: history.conductividad,
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  strokeWidth: 4,
+                },
+              ],
             }}
             width={screenWidth - 40}
-            height={220}
-            chartConfig={chartConfig}
+            height={240}
+            chartConfig={conductividadChartConfig}
             bezier
             style={styles.chart}
+            withShadow={true}
+            withDots={true}
+            withInnerLines={true}
+            withOuterLines={true}
+            withVerticalLines={true}
+            withHorizontalLines={true}
           />
+          <View style={styles.chartFooter}>
+            <Text style={styles.chartSubtitle}>⚡ Calidad del agua</Text>
+          </View>
         </View>
       )}
 
       {history.ph.length > 1 && (
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>pH del Agua - Tiempo Real</Text>
+          <View style={styles.chartHeader}>
+            <MaterialIcons name="science" size={24} color="#805AD5" />
+            <Text style={styles.chartTitle}>pH del Agua - Tiempo Real</Text>
+          </View>
           <LineChart
             data={{
               labels: history.ph.map((_, i) => `${i + 1}`),
-              datasets: [{ data: history.ph }],
+              datasets: [
+                {
+                  data: history.ph,
+                  color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+                  strokeWidth: 4,
+                },
+              ],
             }}
             width={screenWidth - 40}
-            height={220}
-            chartConfig={chartConfig}
+            height={240}
+            chartConfig={phChartConfig}
             bezier
             style={styles.chart}
+            withShadow={true}
+            withDots={true}
+            withInnerLines={true}
+            withOuterLines={true}
+            withVerticalLines={true}
+            withHorizontalLines={true}
           />
+          <View style={styles.chartFooter}>
+            <Text style={styles.chartSubtitle}>⚗️ Balance químico</Text>
+          </View>
         </View>
       )}
 
       <View style={styles.alertContainer}>
         <View style={[styles.alertCard, { backgroundColor: data.ph < 6.5 || data.ph > 8.0 ? "#FFCDD2" : "#C8E6C9" }]}>
-          <Text style={styles.alertTitle}>Estado del pH</Text>
-          <Text style={styles.alertText}>
-            {data.ph < 6.5 || data.ph > 8.0 ? "Fuera del rango óptimo" : "Dentro del rango óptimo"}
-          </Text>
+          <MaterialIcons
+            name={data.ph < 6.5 || data.ph > 8.0 ? "warning" : "check-circle"}
+            size={24}
+            color={data.ph < 6.5 || data.ph > 8.0 ? "#D32F2F" : "#388E3C"}
+          />
+          <View style={styles.alertContent}>
+            <Text style={styles.alertTitle}>Estado del pH</Text>
+            <Text style={styles.alertText}>
+              {data.ph < 6.5 || data.ph > 8.0 ? "Fuera del rango óptimo" : "Dentro del rango óptimo"}
+            </Text>
+          </View>
         </View>
       </View>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.modelButton} onPress={() => navigation?.navigate("PrediccionTruchasAvanzada")}>
-          <Text style={styles.buttonText}>Modelo Avanzado de Crecimiento</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.modelButton} onPress={() => navigation?.navigate("PrediccionTruchas")}>
-          <Text style={styles.buttonText}>Modelo Lineal Simple</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Botones para modelos estadísticos - Solo usuarios institucionales */}
+      {hasModelAccess && (
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.regressionButton} onPress={handleModeloRegresion}>
+            <MaterialIcons name="trending-up" size={20} color="white" />
+            <Text style={styles.buttonText}>Modelo de Regresión Unificado</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.timeSeriesButton} onPress={handleModeloSeriesTemporales}>
+            <MaterialIcons name="timeline" size={20} color="white" />
+            <Text style={styles.buttonText}>Series Temporales SARIMA</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {!hasModelAccess && (isGmailUser || !isUcundinamarcaUser) && (
+        <View style={styles.restrictedContainer}>
+          <MaterialIcons name={isGmailUser ? "visibility" : "lock"} size={24} color="#999" />
+          <Text style={styles.restrictedText}>
+            {isGmailUser
+              ? "Usuario Gmail: Solo visualización de gráficas y alertas"
+              : "Los modelos estadísticos requieren correo institucional"}
+          </Text>
+        </View>
+      )}
     </ScrollView>
   )
 }
@@ -230,13 +419,15 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: "#F8F9FA",
   },
   statusBar: {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 20,
     paddingVertical: 10,
     alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0E0E0",
   },
   statusIndicator: {
     flexDirection: "row",
@@ -244,6 +435,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   statusText: {
     color: "white",
@@ -258,18 +454,21 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#1565C0",
-    padding: 20,
+    padding: 25,
     alignItems: "center",
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
   title: {
     color: "white",
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
   },
   subtitle: {
     color: "white",
     fontSize: 16,
     marginTop: 5,
+    opacity: 0.9,
   },
   metricsContainer: {
     flexDirection: "row",
@@ -279,80 +478,163 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     backgroundColor: "white",
-    borderRadius: 10,
+    borderRadius: 15,
     padding: 20,
     alignItems: "center",
     flex: 0.48,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+    borderLeftWidth: 4,
+  },
+  longitudCard: {
+    borderLeftColor: "#1565C0",
+    backgroundColor: "#E3F2FD",
+  },
+  tempCard: {
+    borderLeftColor: "#E53E3E",
+    backgroundColor: "#FFEBEE",
+  },
+  conductividadCard: {
+    borderLeftColor: "#D69E2E",
+    backgroundColor: "#FFFBF0",
+  },
+  phCard: {
+    borderLeftColor: "#805AD5",
+    backgroundColor: "#FAF5FF",
   },
   metricValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#1565C0",
+    marginTop: 8,
   },
   metricLabel: {
     fontSize: 14,
     color: "#666",
     marginTop: 5,
+    fontWeight: "500",
   },
   chartContainer: {
     backgroundColor: "white",
     margin: 20,
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 20,
+    padding: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  chartHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: "#F0F0F0",
   },
   chartTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 15,
     color: "#333",
+    marginLeft: 10,
   },
   chart: {
-    borderRadius: 16,
+    borderRadius: 20,
+    marginVertical: 8,
+  },
+  chartFooter: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+    alignItems: "center",
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    color: "#666",
+    fontStyle: "italic",
   },
   alertContainer: {
     padding: 20,
     paddingTop: 0,
   },
   alertCard: {
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 15,
+    padding: 18,
+    flexDirection: "row",
     alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  alertContent: {
+    marginLeft: 15,
+    flex: 1,
   },
   alertTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 5,
+    marginBottom: 2,
   },
   alertText: {
     fontSize: 14,
-    textAlign: "center",
   },
   buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     padding: 20,
+    gap: 15,
   },
-  modelButton: {
-    backgroundColor: "#0277BD",
-    borderRadius: 10,
-    padding: 15,
-    flex: 0.48,
+  regressionButton: {
+    backgroundColor: "#4CAF50",
+    borderRadius: 15,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  timeSeriesButton: {
+    backgroundColor: "#9C27B0",
+    borderRadius: 15,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   buttonText: {
     color: "white",
     textAlign: "center",
     fontWeight: "bold",
-    fontSize: 12,
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  restrictedContainer: {
+    alignItems: "center",
+    padding: 20,
+    margin: 20,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#E0E0E0",
+  },
+  restrictedText: {
+    color: "#999",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 10,
+    lineHeight: 18,
   },
 })

@@ -1,186 +1,103 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Share } from "react-native"
+"use client"
+
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, BackHandler, Platform } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
-import { API_BASE_URL, testConnection } from "../config/api"
-import { Platform } from "react-native"
+import { useAuth } from "../context/authContext"
 
 interface OpcionesScreenProps {
-  onLogout: () => void
   navigation?: any
 }
 
-// Datos simulados de usuarios registrados
-const USUARIOS_REGISTRADOS = [
-  { id: 1, nombre: "Dr. Carlos Rodríguez", email: "carlos.rodriguez@ucundinamarca.edu.co" },
-  { id: 2, nombre: "Ing. María González", email: "maria.gonzalez@ucundinamarca.edu.co" },
-  { id: 3, nombre: "Prof. Juan Martínez", email: "juan.martinez@ucundinamarca.edu.co" },
-  { id: 4, nombre: "Dra. Ana López", email: "ana.lopez@ucundinamarca.edu.co" },
-  { id: 5, nombre: "Ing. Pedro Sánchez", email: "pedro.sanchez@ucundinamarca.edu.co" },
-]
+export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
+  const { user, userActivities, logout } = useAuth()
 
-export default function OpcionesScreen({ onLogout, navigation }: OpcionesScreenProps) {
+  // Verificar acceso según el dominio del correo
+  const isUcundinamarcaUser = user?.correo?.endsWith("@ucundinamarca.edu.co") || false
+  const isGmailUser = user?.correo?.endsWith("@gmail.com") || false
+
+  console.log(`🔍 OpcionesScreen - Usuario: ${user?.correo}`)
+  console.log(`🎓 Ucundinamarca: ${isUcundinamarcaUser} (acceso completo)`)
+  console.log(`📧 Gmail: ${isGmailUser} (solo gráficas y alertas)`)
+
   const handleUsuariosRegistrados = () => {
+    if (!isUcundinamarcaUser) {
+      Alert.alert(
+        "Acceso Restringido",
+        "Solo usuarios institucionales (@ucundinamarca.edu.co) pueden ver usuarios registrados",
+      )
+      return
+    }
+
     if (navigation) {
       navigation.navigate("Usuarios")
-    } else {
-      // Fallback para cuando no hay navegación
-      const usuariosList = USUARIOS_REGISTRADOS.map(
-        (user, index) => `${index + 1}. ${user.nombre}\n   ${user.email}`,
-      ).join("\n\n")
-
-      Alert.alert("👥 Usuarios Registrados", `Total: ${USUARIOS_REGISTRADOS.length} usuarios\n\n${usuariosList}`, [
-        { text: "Cerrar", style: "default" },
-      ])
     }
   }
 
   const handleGenerarAlerta = () => {
+    // Tanto usuarios institucionales como Gmail pueden ver alertas
+    if (!isUcundinamarcaUser && !isGmailUser) {
+      Alert.alert("Acceso Restringido", "Requiere correo institucional (@ucundinamarca.edu.co) o @gmail.com")
+      return
+    }
+
     if (navigation) {
       navigation.navigate("Alertas")
-    } else {
-      // Fallback para cuando no hay navegación
-      Alert.alert("🚨 Configurar Alertas", "Selecciona el tipo de alerta que deseas configurar:", [
-        {
-          text: "Cultivos (Lechugas)",
-          onPress: () => configurarAlertaCultivos(),
-        },
-        {
-          text: "Tanques/Peces (Truchas)",
-          onPress: () => configurarAlertaTanques(),
-        },
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-      ])
     }
-  }
-
-  const configurarAlertaCultivos = () => {
-    Alert.alert(
-      "🥬 Alertas para Cultivos",
-      "Configurar alertas para cambios bruscos en:\n\n• Temperatura > 25°C o < 18°C\n• Humedad > 80% o < 50%\n• pH > 7.5 o < 5.5\n• Altura de crecimiento anormal",
-      [
-        {
-          text: "Activar Alertas",
-          onPress: () =>
-            Alert.alert("✅ Alertas Activadas", "Las alertas para cultivos han sido configuradas correctamente."),
-        },
-        { text: "Cancelar", style: "cancel" },
-      ],
-    )
-  }
-
-  const configurarAlertaTanques = () => {
-    Alert.alert(
-      "🐟 Alertas para Tanques/Peces",
-      "Configurar alertas para cambios bruscos en:\n\n• Temperatura > 15°C o < 10°C\n• Conductividad > 250 μS/cm o < 150 μS/cm\n• pH > 8.0 o < 6.5\n• Longitud de crecimiento anormal",
-      [
-        {
-          text: "Activar Alertas",
-          onPress: () =>
-            Alert.alert("✅ Alertas Activadas", "Las alertas para tanques/peces han sido configuradas correctamente."),
-        },
-        { text: "Cancelar", style: "cancel" },
-      ],
-    )
   }
 
   const handleGenerarReporte = () => {
+    if (!isUcundinamarcaUser) {
+      Alert.alert("Acceso Restringido", "Solo usuarios institucionales (@ucundinamarca.edu.co) pueden generar reportes")
+      return
+    }
+
     if (navigation) {
       navigation.navigate("Reportes")
-    } else {
-      // Fallback para cuando no hay navegación
-      Alert.alert("📊 Generar Reporte", "Selecciona el módulo para generar el reporte:", [
-        {
-          text: "Cultivos (Excel)",
-          onPress: () => generarReporteCultivos("excel"),
-        },
-        {
-          text: "Cultivos (PDF)",
-          onPress: () => generarReporteCultivos("pdf"),
-        },
-        {
-          text: "Tanques/Peces (Excel)",
-          onPress: () => generarReporteTanques("excel"),
-        },
-        {
-          text: "Tanques/Peces (PDF)",
-          onPress: () => generarReporteTanques("pdf"),
-        },
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
-      ])
     }
   }
 
-  const generarReporteCultivos = async (formato: "excel" | "pdf") => {
-    Alert.alert("⏳ Generando Reporte", "Recopilando datos de cultivos...")
+  const handleCambiarContrasena = () => {
+    if (!isUcundinamarcaUser) {
+      Alert.alert(
+        "Acceso Restringido",
+        "Solo usuarios institucionales (@ucundinamarca.edu.co) pueden cambiar contraseña",
+      )
+      return
+    }
 
-    // Simular generación de reporte
-    setTimeout(() => {
-      const fecha = new Date().toLocaleDateString()
-      const reporteInfo = `Reporte de Cultivos (${formato.toUpperCase()})\nFecha: ${fecha}\n\nDatos incluidos:\n• Temperatura actual y histórica\n• Humedad del ambiente\n• Niveles de pH\n• Altura de plantas\n• Área foliar\n\nTotal de registros: 403,626`
-
-      Alert.alert("✅ Reporte Generado", reporteInfo, [
-        {
-          text: "Compartir",
-          onPress: () =>
-            Share.share({
-              message: reporteInfo,
-              title: `Reporte Cultivos ${fecha}`,
-            }),
-        },
-        { text: "Cerrar", style: "default" },
-      ])
-    }, 2000)
+    navigation?.navigate("CambiarContrasena")
   }
 
-  const generarReporteTanques = async (formato: "excel" | "pdf") => {
-    Alert.alert("⏳ Generando Reporte", "Recopilando datos de tanques/peces...")
+  const handleAcercaDe = () => {
+    if (!isUcundinamarcaUser) {
+      Alert.alert(
+        "Acceso Restringido",
+        "Solo usuarios institucionales (@ucundinamarca.edu.co) pueden ver información del aplicativo",
+      )
+      return
+    }
 
-    // Simular generación de reporte
-    setTimeout(() => {
-      const fecha = new Date().toLocaleDateString()
-      const reporteInfo = `Reporte de Tanques/Peces (${formato.toUpperCase()})\nFecha: ${fecha}\n\nDatos incluidos:\n• Temperatura del agua\n• Conductividad eléctrica\n• Niveles de pH\n• Longitud de truchas\n• Calidad del agua\n\nTotal de registros: 1,039,426`
-
-      Alert.alert("✅ Reporte Generado", reporteInfo, [
-        {
-          text: "Compartir",
-          onPress: () =>
-            Share.share({
-              message: reporteInfo,
-              title: `Reporte Tanques ${fecha}`,
-            }),
-        },
-        { text: "Cerrar", style: "default" },
-      ])
-    }, 2000)
-  }
-
-  const handleTestConnection = async () => {
-    Alert.alert("Probando conexión", "Verificando conexión con la API...")
-    const isConnected = await testConnection()
     Alert.alert(
-      isConnected ? "✅ Conexión exitosa" : "❌ Error de conexión",
-      isConnected
-        ? "La conexión con la API está funcionando correctamente"
-        : `No se pudo conectar con la API.\n\nURL: ${API_BASE_URL}\nPlataforma: ${Platform.OS}\n\nVerifica:\n• Que tu API esté corriendo en puerto 55839\n• La configuración de red\n• El firewall\n• Que los endpoints respondan correctamente`,
+      "Acerca del Aplicativo",
+      `Monitor Acuapónico UCUNDINAMARCA\nVersión 2.0.0\n\nUsuario: ${user?.nombre} ${user?.apellido}\nCorreo: ${user?.correo}\nActividades: ${userActivities.length}\n\nPlataforma: ${Platform.OS}\n\nDesarrollado para el monitoreo de sistemas acuapónicos con truchas arcoíris y lechugas.`,
     )
   }
 
   const handleSalir = () => {
-    Alert.alert("🚪 Salir de la Aplicación", "¿Estás seguro que deseas cerrar sesión?", [
+    Alert.alert("🚪 Cerrar Sesión", "¿Estás seguro que deseas cerrar sesión?", [
       {
         text: "Cancelar",
         style: "cancel",
       },
       {
-        text: "Salir",
+        text: "Cerrar Sesión",
         style: "destructive",
-        onPress: () => {
-          onLogout()
+        onPress: async () => {
+          await logout()
+          // En Android, cerrar la aplicación después del logout
+          if (Platform.OS === "android") {
+            BackHandler.exitApp()
+          }
         },
       },
     ])
@@ -189,19 +106,21 @@ export default function OpcionesScreen({ onLogout, navigation }: OpcionesScreenP
   const options = [
     {
       id: 1,
-      title: "Usuarios Registrados",
+      title: "Ver Usuarios Registrados",
       icon: "people",
       description: "Ver lista de usuarios del sistema",
       action: handleUsuariosRegistrados,
       color: "#2E7D32",
+      requiredAccess: "institutional", // Solo institucionales
     },
     {
       id: 2,
-      title: "Generar Alerta y/o Regularidad",
+      title: "Ver Alertas del Sistema",
       icon: "notifications-active",
-      description: "Configurar alertas para cambios bruscos",
+      description: "Ver alertas automáticas de variables ambientales",
       action: handleGenerarAlerta,
       color: "#FF9800",
+      requiredAccess: "both", // Institucionales y Gmail
     },
     {
       id: 3,
@@ -210,46 +129,64 @@ export default function OpcionesScreen({ onLogout, navigation }: OpcionesScreenP
       description: "Exportar datos en Excel o PDF",
       action: handleGenerarReporte,
       color: "#1976D2",
+      requiredAccess: "institutional", // Solo institucionales
     },
     {
       id: 4,
-      title: "Probar Conexión API",
-      icon: "wifi",
-      description: "Verificar conexión con el servidor",
-      action: handleTestConnection,
-      color: "#4CAF50",
+      title: "Cambiar Contraseña",
+      icon: "lock",
+      description: "Actualizar tu contraseña",
+      action: handleCambiarContrasena,
+      color: "#FF5722",
+      requiredAccess: "institutional", // Solo institucionales
     },
     {
       id: 5,
-      title: "Acerca de",
+      title: "Acerca del Aplicativo",
       icon: "info",
       description: "Información sobre la aplicación",
-      action: () =>
-        Alert.alert(
-          "Acerca de",
-          `Monitor Acuapónico UCUNDINAMARCA\nVersión 1.0.0\n\nAPI URL: ${API_BASE_URL}\nPlataforma: ${Platform.OS}\n\nDesarrollado para el monitoreo de sistemas acuapónicos con truchas arcoíris y lechugas.`,
-        ),
+      action: handleAcercaDe,
       color: "#607D8B",
+      requiredAccess: "institutional", // Solo institucionales
     },
     {
       id: 6,
-      title: "Salir",
+      title: "Cerrar Sesión",
       icon: "exit-to-app",
-      description: "Cerrar sesión y salir de la aplicación",
+      description: "Salir de la aplicación",
       action: handleSalir,
       color: "#F44336",
+      requiredAccess: "all", // Todos los usuarios
     },
   ]
+
+  // Filtrar opciones según permisos
+  const availableOptions = options.filter((option) => {
+    if (option.requiredAccess === "all") return true
+    if (option.requiredAccess === "institutional") return isUcundinamarcaUser
+    if (option.requiredAccess === "both") return isUcundinamarcaUser || isGmailUser
+    return false
+  })
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Opciones del Sistema</Text>
-        <Text style={styles.subtitle}>Configuración y herramientas</Text>
+        <Text style={styles.subtitle}>
+          {user?.nombre} {user?.apellido}
+        </Text>
+        <Text style={styles.userInfo}>{user?.correo}</Text>
+        <Text style={styles.activitiesInfo}>
+          {isUcundinamarcaUser
+            ? "🎓 Usuario Institucional"
+            : isGmailUser
+              ? "📧 Usuario Gmail"
+              : "❌ Usuario Sin Permisos"}
+        </Text>
       </View>
 
       <View style={styles.optionsContainer}>
-        {options.map((option) => (
+        {availableOptions.map((option) => (
           <TouchableOpacity key={option.id} style={styles.optionCard} onPress={option.action}>
             <View style={[styles.optionIcon, { backgroundColor: option.color + "20" }]}>
               <MaterialIcons name={option.icon as any} size={32} color={option.color} />
@@ -266,8 +203,7 @@ export default function OpcionesScreen({ onLogout, navigation }: OpcionesScreenP
       <View style={styles.infoContainer}>
         <Text style={styles.infoTitle}>Sistema de Monitoreo Acuapónico</Text>
         <Text style={styles.infoText}>Universidad de Cundinamarca</Text>
-        <Text style={styles.infoText}>Versión 1.0.0</Text>
-        <Text style={styles.infoText}>API: {API_BASE_URL}</Text>
+        <Text style={styles.infoText}>Versión 2.0.0 - Con Control de Acceso</Text>
         <Text style={styles.infoText}>Plataforma: {Platform.OS}</Text>
       </View>
     </ScrollView>
@@ -291,8 +227,22 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: "white",
-    fontSize: 16,
+    fontSize: 18,
     marginTop: 5,
+    fontWeight: "600",
+  },
+  userInfo: {
+    color: "white",
+    fontSize: 14,
+    marginTop: 5,
+    opacity: 0.9,
+  },
+  activitiesInfo: {
+    color: "white",
+    fontSize: 12,
+    marginTop: 5,
+    opacity: 0.8,
+    textAlign: "center",
   },
   optionsContainer: {
     padding: 20,
@@ -319,7 +269,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#333",
     marginBottom: 5,

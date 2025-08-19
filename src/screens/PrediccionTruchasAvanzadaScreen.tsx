@@ -5,7 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert 
 import { MaterialIcons } from "@expo/vector-icons"
 import { LineChart } from "react-native-chart-kit"
 import { Dimensions } from "react-native"
-import { prediccionAvanzadaTruchasService } from "../services/prediccionAvanzadaService"
+import { prediccionAvanzadaTruchasService } from "../services/prediccionService"
 
 const screenWidth = Dimensions.get("window").width
 
@@ -16,90 +16,74 @@ interface PrediccionTruchasAvanzadaScreenProps {
 interface ResultadoPrediccionAvanzada {
   diasPrediccion: number
   longitudActual: number
-
-  // Regresión lineal
   longitudPrediccionLineal: number
   crecimientoEsperadoLineal: number
   r2Lineal: number
-  pendienteLineal: number
-  interceptoLineal: number
-
-  // von Bertalanffy
   longitudPrediccionVB: number
   crecimientoEsperadoVB: number
-  L_infinito: number
-  coeficientesVB: number[]
   r2VB: number
-  errorVB: number
-
-  // General
+  L_infinito: number
   totalRegistros: number
   edadEstimadaMeses: number
-  variablesAmbientales: {
-    temperatura: number
-    conductividad: number
-    ph: number
-    oxigeno: number
-  }
-  metadata: any
 }
 
 export default function PrediccionTruchasAvanzadaScreen({ navigation }: PrediccionTruchasAvanzadaScreenProps) {
-  const [diasPrediccion, setDiasPrediccion] = useState("7")
+  const [diasPrediccion, setDiasPrediccion] = useState("5")
   const [cargando, setCargando] = useState(false)
   const [resultado, setResultado] = useState<ResultadoPrediccionAvanzada | null>(null)
   const [datosParaGrafico, setDatosParaGrafico] = useState<number[]>([])
   const [progreso, setProgreso] = useState("")
 
   const realizarPrediccion = async () => {
-    const dias = Number.parseInt(diasPrediccion)
-    if (isNaN(dias) || dias <= 0 || dias > 365) {
-      Alert.alert("Error", "Por favor ingresa un número válido de días (1-365)")
-      return
-    }
-
-    setCargando(true)
-    setProgreso("Iniciando análisis avanzado...")
-
     try {
-      console.log(`🎯 Iniciando predicción avanzada para ${dias} días...`)
+      const dias = Number.parseInt(diasPrediccion)
+      if (isNaN(dias) || dias <= 0 || dias > 1000) {
+        Alert.alert("Error", "Por favor ingresa un número válido de días (1-1000)")
+        return
+      }
 
-      setProgreso("Obteniendo datos históricos diarios...")
+      setCargando(true)
+      setProgreso("Obteniendo datos históricos...")
+
       const resultado = await prediccionAvanzadaTruchasService.realizarPrediccion(dias)
 
-      setProgreso("Procesando modelos de crecimiento...")
-      const { datos: datosHistoricos } = await prediccionAvanzadaTruchasService.obtenerDatosHistoricos()
-      setDatosParaGrafico(
-        datosHistoricos.slice(-15).map((d: { valorObservado: number }) => d.valorObservado)
-      )
+      setProgreso("Procesando datos para gráficos...")
+      // Obtener datos para el gráfico
+      try {
+        const datosHistoricos = await prediccionAvanzadaTruchasService.obtenerDatosHistoricos()
+        const longitudesParaGrafico = datosHistoricos.datos.slice(-10).map((d: any) => d.valorObservado)
+        setDatosParaGrafico(longitudesParaGrafico.length > 0 ? longitudesParaGrafico : [0])
+      } catch (error) {
+        console.error("Error obteniendo datos para gráfico:", error)
+        setDatosParaGrafico([0])
+      }
 
       setResultado(resultado)
       setProgreso("")
 
       Alert.alert(
-        "🎯 Predicción Avanzada Completada",
-        `Modelos: Regresión Lineal + von Bertalanffy\n\n` +
-          `📏 Longitud actual: ${resultado.longitudActual.toFixed(2)} cm\n\n` +
+        "🐟 Predicción Avanzada Completada",
+        `Predicción para ${dias} días:\n\n` +
+          `📏 LONGITUD ACTUAL: ${resultado.longitudActual.toFixed(2)} cm\n\n` +
           `📈 REGRESIÓN LINEAL:\n` +
-          `• Predicha: ${resultado.longitudPrediccionLineal.toFixed(2)} cm\n` +
+          `• Predicción: ${resultado.longitudPrediccionLineal.toFixed(2)} cm\n` +
           `• Crecimiento: +${resultado.crecimientoEsperadoLineal.toFixed(2)} cm\n` +
-          `• R²: ${(resultado.r2Lineal * 100).toFixed(1)}%\n\n` +
+          `• Precisión: ${(resultado.r2Lineal * 100).toFixed(1)}%\n\n` +
           `🧬 VON BERTALANFFY:\n` +
-          `• Predicha: ${resultado.longitudPrediccionVB.toFixed(2)} cm\n` +
+          `• Predicción: ${resultado.longitudPrediccionVB.toFixed(2)} cm\n` +
           `• Crecimiento: +${resultado.crecimientoEsperadoVB.toFixed(2)} cm\n` +
-          `• R²: ${(resultado.r2VB * 100).toFixed(1)}%\n` +
-          `• L∞: ${resultado.L_infinito.toFixed(2)} cm`,
+          `• Precisión: ${(resultado.r2VB * 100).toFixed(1)}%\n` +
+          `• L∞: ${resultado.L_infinito.toFixed(1)} cm\n\n` +
+          `📋 Días analizados: ${resultado.totalRegistros}\n` +
+          `🎂 Edad estimada: ${resultado.edadEstimadaMeses.toFixed(1)} meses`,
       )
     } catch (error) {
-      console.error("❌ Error en predicción avanzada:", error)
+      console.error("Error en predicción:", error)
       setProgreso("")
-      let errorMessage = "Ocurrió un error desconocido."
-      if (error instanceof Error) {
-        errorMessage = error.message
-      } else if (typeof error === "string") {
-        errorMessage = error
-      }
-      Alert.alert("Error", `No se pudo realizar la predicción avanzada:\n\n${errorMessage}`)
+      Alert.alert(
+        "Error",
+        `No se pudo realizar la predicción:\n\n${error instanceof Error ? error.message : String(error)}`,
+      )
     } finally {
       setCargando(false)
     }
@@ -118,48 +102,50 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.title}>Predicción Avanzada Truchas</Text>
+        <Text style={styles.title}>Modelo Avanzado Truchas</Text>
         <View style={styles.placeholder} />
       </View>
 
       <ScrollView style={styles.content}>
         {/* Información del modelo */}
         <View style={styles.infoCard}>
-          <MaterialIcons name="psychology" size={24} color="#1976D2" />
+          <MaterialIcons name="auto-awesome" size={24} color="#2196F3" />
           <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>Modelos Duales: Lineal + von Bertalanffy</Text>
+            <Text style={styles.infoTitle}>Modelos Biológicos Avanzados</Text>
             <Text style={styles.infoText}>
-              📈 Regresión Lineal: L(t) = mt + b{"\n"}🧬 von Bertalanffy: L(t) = L∞ · (1 - e^(-k(t-t₀))){"\n\n"}
-              Combina simplicidad lineal con realismo biológico.
+              Combina regresión lineal con el modelo de von Bertalanffy para predicciones precisas del crecimiento de
+              truchas. Considera variables ambientales como temperatura, pH, conductividad y oxígeno.{"\n"}✅ Regresión
+              lineal para tendencias{"\n"}🧬 von Bertalanffy para crecimiento biológico{"\n"}🌡️ Variables ambientales
+              integradas{"\n"}📊 Datos de referencia científica
             </Text>
           </View>
         </View>
 
         {/* Input para días de predicción */}
         <View style={styles.inputCard}>
-          <Text style={styles.inputLabel}>📅 Días para predicción:</Text>
+          <Text style={styles.inputLabel}>📅 Días para predicción avanzada (1-1000):</Text>
           <TextInput
             style={styles.input}
             value={diasPrediccion}
             onChangeText={setDiasPrediccion}
             keyboardType="numeric"
-            placeholder="Ej: 7"
-            maxLength={3}
+            placeholder="Ej: 5, 30, 100, 365"
+            maxLength={4}
           />
           <TouchableOpacity
             style={[styles.predictButton, cargando && styles.predictButtonDisabled]}
             onPress={realizarPrediccion}
             disabled={cargando}
           >
-            <MaterialIcons name="psychology" size={20} color="white" />
+            <MaterialIcons name="auto-awesome" size={20} color="white" />
             <Text style={styles.predictButtonText}>
-              {cargando ? "Analizando datos diarios..." : "Realizar Predicción Dual"}
+              {cargando ? "Analizando con modelos avanzados..." : "Realizar Predicción Avanzada"}
             </Text>
           </TouchableOpacity>
 
           {progreso && (
             <View style={styles.progressContainer}>
-              <MaterialIcons name="settings" size={16} color="#1976D2" />
+              <MaterialIcons name="hourglass-empty" size={16} color="#2196F3" />
               <Text style={styles.progressText}>{progreso}</Text>
             </View>
           )}
@@ -167,119 +153,77 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
 
         {/* Resultados de la predicción */}
         {resultado && (
-          <>
-            <View style={styles.resultCard}>
-              <Text style={styles.resultTitle}>🎯 Resultados de Ambos Modelos</Text>
+          <View style={styles.resultCard}>
+            <Text style={styles.resultTitle}>🐟 Resultados del Modelo Avanzado</Text>
 
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>📏 Longitud Actual:</Text>
-                <Text style={styles.resultValue}>{resultado.longitudActual.toFixed(2)} cm</Text>
-              </View>
-
-              <Text style={styles.sectionTitle}>📈 REGRESIÓN LINEAL</Text>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Longitud Predicha ({resultado.diasPrediccion} días):</Text>
-                <Text style={styles.resultValue}>{resultado.longitudPrediccionLineal.toFixed(2)} cm</Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Crecimiento Esperado:</Text>
-                <Text style={[styles.resultValue, { color: "#4CAF50" }]}>
-                  +{resultado.crecimientoEsperadoLineal.toFixed(2)} cm
-                </Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Precisión (R²):</Text>
-                <Text style={[styles.resultValue, { color: getCalidadModelo(resultado.r2Lineal).color }]}>
-                  {(resultado.r2Lineal * 100).toFixed(1)}% {getCalidadModelo(resultado.r2Lineal).emoji}
-                </Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Tasa de Crecimiento:</Text>
-                <Text style={styles.resultValue}>{resultado.pendienteLineal.toFixed(4)} cm/día</Text>
-              </View>
-
-              <Text style={[styles.sectionTitle, { marginTop: 15 }]}>🧬 VON BERTALANFFY</Text>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Longitud Predicha ({resultado.diasPrediccion} días):</Text>
-                <Text style={styles.resultValue}>{resultado.longitudPrediccionVB.toFixed(2)} cm</Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Crecimiento Esperado:</Text>
-                <Text style={[styles.resultValue, { color: "#4CAF50" }]}>
-                  +{resultado.crecimientoEsperadoVB.toFixed(2)} cm
-                </Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Precisión (R²):</Text>
-                <Text style={[styles.resultValue, { color: getCalidadModelo(resultado.r2VB).color }]}>
-                  {(resultado.r2VB * 100).toFixed(1)}% {getCalidadModelo(resultado.r2VB).emoji}
-                </Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>Longitud Máxima Teórica (L∞):</Text>
-                <Text style={[styles.resultValue, { color: "#FF9800" }]}>{resultado.L_infinito.toFixed(2)} cm</Text>
-              </View>
-
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>📋 Días Analizados:</Text>
-                <Text style={styles.resultValue}>{resultado.totalRegistros}</Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultLabel}>🎂 Edad Estimada:</Text>
-                <Text style={styles.resultValue}>{resultado.edadEstimadaMeses?.toFixed(1)} meses</Text>
-              </View>
+            <Text style={styles.sectionTitle}>📏 ESTADO ACTUAL</Text>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Longitud Actual:</Text>
+              <Text style={styles.resultValue}>{resultado.longitudActual.toFixed(2)} cm</Text>
+            </View>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Edad Estimada:</Text>
+              <Text style={styles.resultValue}>{resultado.edadEstimadaMeses.toFixed(1)} meses</Text>
             </View>
 
-            {/* Variables ambientales */}
-            <View style={styles.variablesCard}>
-              <Text style={styles.variablesTitle}>🌡️ Variables Ambientales Actuales</Text>
-
-              <View style={styles.variableRow}>
-                <MaterialIcons name="thermostat" size={20} color="#F44336" />
-                <Text style={styles.variableLabel}>Temperatura:</Text>
-                <Text style={styles.variableValue}>{resultado.variablesAmbientales.temperatura.toFixed(1)}°C</Text>
-              </View>
-
-              <View style={styles.variableRow}>
-                <MaterialIcons name="air" size={20} color="#2196F3" />
-                <Text style={styles.variableLabel}>Oxígeno Disuelto:</Text>
-                <Text style={styles.variableValue}>{resultado.variablesAmbientales.oxigeno.toFixed(1)} mg/L</Text>
-              </View>
-
-              <View style={styles.variableRow}>
-                <MaterialIcons name="electrical-services" size={20} color="#FF9800" />
-                <Text style={styles.variableLabel}>Conductividad:</Text>
-                <Text style={styles.variableValue}>
-                  {resultado.variablesAmbientales.conductividad.toFixed(0)} μS/cm
-                </Text>
-              </View>
-
-              <View style={styles.variableRow}>
-                <MaterialIcons name="science" size={20} color="#9C27B0" />
-                <Text style={styles.variableLabel}>pH:</Text>
-                <Text style={styles.variableValue}>{resultado.variablesAmbientales.ph.toFixed(2)}</Text>
-              </View>
+            <Text style={[styles.sectionTitle, { marginTop: 15 }]}>📈 REGRESIÓN LINEAL</Text>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Predicción ({resultado.diasPrediccion} días):</Text>
+              <Text style={styles.resultValue}>{resultado.longitudPrediccionLineal.toFixed(2)} cm</Text>
+            </View>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Crecimiento Esperado:</Text>
+              <Text style={[styles.resultValue, { color: "#4CAF50" }]}>
+                +{resultado.crecimientoEsperadoLineal.toFixed(2)} cm
+              </Text>
+            </View>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Precisión (R²):</Text>
+              <Text style={[styles.resultValue, { color: getCalidadModelo(resultado.r2Lineal).color }]}>
+                {(resultado.r2Lineal * 100).toFixed(1)}% {getCalidadModelo(resultado.r2Lineal).emoji}
+              </Text>
             </View>
 
-            {/* Información de la API */}
-            {resultado.metadata && (
-              <View style={styles.metadataCard}>
-                <Text style={styles.metadataTitle}>📊 Información de los Datos</Text>
-                <Text style={styles.metadataText}>
-                  • {resultado.metadata.descripcion}
-                  {"\n"}• Frecuencia original: {resultado.metadata.frecuenciaOriginal}
-                  {"\n"}• Total de días disponibles: {resultado.metadata.totalDias}
-                  {"\n"}• Registros por día: {resultado.metadata.registrosPorDia?.toLocaleString()}
-                </Text>
-              </View>
-            )}
-          </>
+            <Text style={[styles.sectionTitle, { marginTop: 15 }]}>🧬 VON BERTALANFFY</Text>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Predicción ({resultado.diasPrediccion} días):</Text>
+              <Text style={styles.resultValue}>{resultado.longitudPrediccionVB.toFixed(2)} cm</Text>
+            </View>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Crecimiento Esperado:</Text>
+              <Text style={[styles.resultValue, { color: "#4CAF50" }]}>
+                +{resultado.crecimientoEsperadoVB.toFixed(2)} cm
+              </Text>
+            </View>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Longitud Máxima (L∞):</Text>
+              <Text style={styles.resultValue}>{resultado.L_infinito.toFixed(1)} cm</Text>
+            </View>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Precisión (R²):</Text>
+              <Text style={[styles.resultValue, { color: getCalidadModelo(resultado.r2VB).color }]}>
+                {(resultado.r2VB * 100).toFixed(1)}% {getCalidadModelo(resultado.r2VB).emoji}
+              </Text>
+            </View>
+
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>📋 Días Analizados:</Text>
+              <Text style={styles.resultValue}>{resultado.totalRegistros}</Text>
+            </View>
+
+            <View style={styles.qualityIndicator}>
+              <Text style={styles.qualityText}>🧬 Modelos Biológicos Avanzados</Text>
+              <Text style={styles.qualitySubtext}>📈 Regresión lineal + von Bertalanffy</Text>
+              <Text style={styles.qualitySubtext}>🌡️ Variables ambientales integradas</Text>
+              <Text style={styles.qualitySubtext}>📊 Datos de referencia científica</Text>
+            </View>
+          </View>
         )}
 
         {/* Gráfico de datos históricos */}
-        {datosParaGrafico.length > 1 && (
+        {datosParaGrafico.length > 0 && (
           <View style={styles.chartContainer}>
-            <Text style={styles.chartTitle}>📈 Datos Históricos Diarios</Text>
+            <Text style={styles.chartTitle}>📈 Datos Históricos de Longitud</Text>
             <LineChart
               data={{
                 labels: datosParaGrafico.map((_, i) => `D${i + 1}`),
@@ -292,9 +236,9 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
               width={screenWidth - 40}
               height={220}
               chartConfig={{
-                backgroundColor: "#1976D2",
-                backgroundGradientFrom: "#2196F3",
-                backgroundGradientTo: "#1976D2",
+                backgroundColor: "#2196F3",
+                backgroundGradientFrom: "#42A5F5",
+                backgroundGradientTo: "#2196F3",
                 decimalPlaces: 1,
                 color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                 labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -305,20 +249,20 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
               bezier
               style={styles.chart}
             />
-            <Text style={styles.chartSubtitle}>Últimos 15 días (último dato diario)</Text>
+            <Text style={styles.chartSubtitle}>Últimos días analizados (modelos avanzados)</Text>
           </View>
         )}
 
         {/* Información adicional */}
         <View style={styles.infoCard}>
-          <MaterialIcons name="info" size={24} color="#4CAF50" />
+          <MaterialIcons name="info" size={24} color="#FF9800" />
           <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>Ventajas del Enfoque Dual</Text>
+            <Text style={styles.infoTitle}>Metodología de Modelos Avanzados</Text>
             <Text style={styles.infoText}>
-              • Usa endpoint optimizado de la API (último dato diario){"\n"}• Regresión lineal: simple y rápida{"\n"}•
-              von Bertalanffy: biológicamente realista{"\n"}• Calibrado con datos de referencia (0-8 meses){"\n"}•
-              Considera variables ambientales{"\n"}• Compara ambos enfoques para mejor decisión{"\n\n"}✅ Basado en{" "}
-              {resultado?.totalRegistros} días de datos reales
+              • Regresión lineal para tendencias generales{"\n"}• von Bertalanffy para crecimiento biológico realista
+              {"\n"}• Integración de variables ambientales{"\n"}• Calibración con datos de referencia científica{"\n"}•
+              R² ≥ 75% indica buena predicción{"\n"}• L∞ representa la longitud máxima teórica{"\n"}• Considera
+              temperatura, pH, conductividad y oxígeno{"\n\n"}🧬 Modelos basados en biología de truchas
             </Text>
           </View>
         </View>
@@ -330,21 +274,26 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "#F8F9FA",
   },
   header: {
-    backgroundColor: "#1976D2",
+    backgroundColor: "#2196F3",
     padding: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   backButton: {
     padding: 5,
   },
   title: {
     color: "white",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
   },
   placeholder: {
@@ -356,65 +305,71 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     backgroundColor: "white",
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 15,
+    padding: 20,
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   infoContent: {
     flex: 1,
     marginLeft: 15,
   },
   infoTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   infoText: {
     fontSize: 14,
     color: "#666",
-    lineHeight: 20,
+    lineHeight: 22,
   },
   inputCard: {
     backgroundColor: "white",
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 15,
+    padding: 25,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   inputLabel: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   input: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: "#E0E0E0",
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 15,
     fontSize: 16,
-    marginBottom: 15,
+    marginBottom: 20,
     textAlign: "center",
+    backgroundColor: "#F8F9FA",
   },
   predictButton: {
-    backgroundColor: "#1976D2",
-    borderRadius: 8,
-    padding: 15,
+    backgroundColor: "#2196F3",
+    borderRadius: 12,
+    padding: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    elevation: 3,
+    shadowColor: "#2196F3",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   predictButtonDisabled: {
     backgroundColor: "#B0BEC5",
@@ -429,44 +384,46 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
-    padding: 10,
+    marginTop: 15,
+    padding: 12,
     backgroundColor: "#E3F2FD",
-    borderRadius: 8,
+    borderRadius: 10,
   },
   progressText: {
-    color: "#1976D2",
+    color: "#2196F3",
     fontSize: 14,
     marginLeft: 8,
+    fontWeight: "500",
   },
   resultCard: {
     backgroundColor: "white",
-    borderRadius: 10,
-    padding: 20,
+    borderRadius: 15,
+    padding: 25,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   resultTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 15,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#1976D2",
+    color: "#2196F3",
     marginBottom: 10,
   },
   resultRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingVertical: 2,
   },
   resultLabel: {
     fontSize: 14,
@@ -474,76 +431,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   resultValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  variablesCard: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  variablesTitle: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 15,
   },
-  variableRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  variableLabel: {
-    fontSize: 14,
-    color: "#666",
-    marginLeft: 10,
-    flex: 1,
-  },
-  variableValue: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-  },
-  metadataCard: {
-    backgroundColor: "#F5F5F5",
+  qualityIndicator: {
+    backgroundColor: "#E3F2FD",
     borderRadius: 10,
-    padding: 15,
-    marginBottom: 20,
+    padding: 12,
+    marginTop: 15,
+    alignItems: "center",
   },
-  metadataTitle: {
+  qualityText: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#333",
-    marginBottom: 10,
+    color: "#2196F3",
+    textAlign: "center",
+    marginBottom: 4,
   },
-  metadataText: {
+  qualitySubtext: {
     fontSize: 12,
-    color: "#666",
-    lineHeight: 18,
+    color: "#2196F3",
+    textAlign: "center",
+    marginBottom: 2,
   },
   chartContainer: {
     backgroundColor: "white",
-    borderRadius: 10,
-    padding: 15,
+    borderRadius: 15,
+    padding: 20,
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 15,
+    marginBottom: 20,
     color: "#333",
   },
   chart: {
@@ -553,6 +480,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 12,
+    fontStyle: "italic",
   },
 })
