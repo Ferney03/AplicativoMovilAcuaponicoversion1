@@ -38,7 +38,7 @@ export default function UserHeader({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#080707ff",
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 2,

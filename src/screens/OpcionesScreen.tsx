@@ -1,8 +1,8 @@
 "use client"
-
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, BackHandler, Platform } from "react-native"
 import { MaterialIcons } from "@expo/vector-icons"
 import { useAuth } from "../context/authContext"
+import { useAlert } from "../context/AlertContext"
 
 interface OpcionesScreenProps {
   navigation?: any
@@ -10,6 +10,7 @@ interface OpcionesScreenProps {
 
 export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
   const { user, userActivities, logout } = useAuth()
+  const { alertasActivas } = useAlert()
 
   // Verificar acceso según el dominio del correo
   const isUcundinamarcaUser = user?.correo?.endsWith("@ucundinamarca.edu.co") || false
@@ -18,6 +19,9 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
   console.log(`🔍 OpcionesScreen - Usuario: ${user?.correo}`)
   console.log(`🎓 Ucundinamarca: ${isUcundinamarcaUser} (acceso completo)`)
   console.log(`📧 Gmail: ${isGmailUser} (solo gráficas y alertas)`)
+
+  // Contar alertas críticas y altas
+  const alertasCriticas = alertasActivas.filter((a) => a.severidad === "critica" || a.severidad === "alta").length
 
   const handleUsuariosRegistrados = () => {
     if (!isUcundinamarcaUser) {
@@ -56,30 +60,17 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
     }
   }
 
-  const handleCambiarContrasena = () => {
-    if (!isUcundinamarcaUser) {
-      Alert.alert(
-        "Acceso Restringido",
-        "Solo usuarios institucionales (@ucundinamarca.edu.co) pueden cambiar contraseña",
-      )
-      return
-    }
-
-    navigation?.navigate("CambiarContrasena")
-  }
-
   const handleAcercaDe = () => {
-    if (!isUcundinamarcaUser) {
+    if (!isUcundinamarcaUser && !isGmailUser) {
       Alert.alert(
-        "Acceso Restringido",
-        "Solo usuarios institucionales (@ucundinamarca.edu.co) pueden ver información del aplicativo",
+        "Información del aplicativo"
       )
       return
     }
 
     Alert.alert(
       "Acerca del Aplicativo",
-      `Monitor Acuapónico UCUNDINAMARCA\nVersión 2.0.0\n\nUsuario: ${user?.nombre} ${user?.apellido}\nCorreo: ${user?.correo}\nActividades: ${userActivities.length}\n\nPlataforma: ${Platform.OS}\n\nDesarrollado para el monitoreo de sistemas acuapónicos con truchas arcoíris y lechugas.`,
+      `Monitor Acuapónico UCUNDINAMARCA\nVersión 1.0.0\n\nUsuario: ${user?.nombre} ${user?.apellido}\nCorreo: ${user?.correo}\n\nPlataforma: ${Platform.OS}\n\nDesarrollado para el monitoreo de sistemas acuapónicos con truchas arcoíris y lechugas.\n\n© 2025 Universidad de Cundinamarca`,
     )
   }
 
@@ -112,6 +103,7 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
       action: handleUsuariosRegistrados,
       color: "#2E7D32",
       requiredAccess: "institutional", // Solo institucionales
+      badge: null,
     },
     {
       id: 2,
@@ -121,6 +113,7 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
       action: handleGenerarAlerta,
       color: "#FF9800",
       requiredAccess: "both", // Institucionales y Gmail
+      badge: alertasCriticas > 0 ? alertasCriticas : null,
     },
     {
       id: 3,
@@ -130,15 +123,7 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
       action: handleGenerarReporte,
       color: "#1976D2",
       requiredAccess: "institutional", // Solo institucionales
-    },
-    {
-      id: 4,
-      title: "Cambiar Contraseña",
-      icon: "lock",
-      description: "Actualizar tu contraseña",
-      action: handleCambiarContrasena,
-      color: "#FF5722",
-      requiredAccess: "institutional", // Solo institucionales
+      badge: null,
     },
     {
       id: 5,
@@ -147,7 +132,8 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
       description: "Información sobre la aplicación",
       action: handleAcercaDe,
       color: "#607D8B",
-      requiredAccess: "institutional", // Solo institucionales
+      requiredAccess: "both",
+      badge: null,
     },
     {
       id: 6,
@@ -157,6 +143,7 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
       action: handleSalir,
       color: "#F44336",
       requiredAccess: "all", // Todos los usuarios
+      badge: null,
     },
   ]
 
@@ -190,6 +177,11 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
           <TouchableOpacity key={option.id} style={styles.optionCard} onPress={option.action}>
             <View style={[styles.optionIcon, { backgroundColor: option.color + "20" }]}>
               <MaterialIcons name={option.icon as any} size={32} color={option.color} />
+              {option.badge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{option.badge > 9 ? "9+" : option.badge}</Text>
+                </View>
+              )}
             </View>
             <View style={styles.optionContent}>
               <Text style={styles.optionTitle}>{option.title}</Text>
@@ -203,8 +195,14 @@ export default function OpcionesScreen({ navigation }: OpcionesScreenProps) {
       <View style={styles.infoContainer}>
         <Text style={styles.infoTitle}>Sistema de Monitoreo Acuapónico</Text>
         <Text style={styles.infoText}>Universidad de Cundinamarca</Text>
-        <Text style={styles.infoText}>Versión 2.0.0 - Con Control de Acceso</Text>
+        <Text style={styles.infoText}>Versión 1.0.0 - Con Control de Acceso y Alertas</Text>
         <Text style={styles.infoText}>Plataforma: {Platform.OS}</Text>
+        {alertasActivas.length > 0 && (
+          <Text style={styles.alertInfo}>
+            🚨 {alertasActivas.length} alerta{alertasActivas.length > 1 ? "s" : ""} activa
+            {alertasActivas.length > 1 ? "s" : ""}
+          </Text>
+        )}
       </View>
     </ScrollView>
   )
@@ -264,6 +262,23 @@ const styles = StyleSheet.create({
     marginRight: 15,
     padding: 10,
     borderRadius: 25,
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    backgroundColor: "#F44336",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   optionContent: {
     flex: 1,
@@ -300,5 +315,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 5,
+  },
+  alertInfo: {
+    fontSize: 14,
+    color: "#FF9800",
+    marginTop: 10,
+    fontWeight: "600",
+  },
+  limitsInfo: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 10,
+    textAlign: "center",
+    lineHeight: 16,
   },
 })

@@ -296,7 +296,7 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
             withHorizontalLines={true}
           />
           <View style={styles.chartFooter}>
-            <Text style={styles.chartSubtitle}>🌡️ Control térmico del hábitat</Text>
+            <Text style={styles.chartSubtitle}>Control térmico</Text>
           </View>
         </View>
       )}
@@ -331,7 +331,7 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
             withHorizontalLines={true}
           />
           <View style={styles.chartFooter}>
-            <Text style={styles.chartSubtitle}>⚡ Calidad del agua</Text>
+            <Text style={styles.chartSubtitle}>Calidad del agua</Text>
           </View>
         </View>
       )}
@@ -366,33 +366,17 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
             withHorizontalLines={true}
           />
           <View style={styles.chartFooter}>
-            <Text style={styles.chartSubtitle}>⚗️ Balance químico</Text>
+            <Text style={styles.chartSubtitle}>Balance químico</Text>
           </View>
         </View>
       )}
-
-      <View style={styles.alertContainer}>
-        <View style={[styles.alertCard, { backgroundColor: data.ph < 6.5 || data.ph > 8.0 ? "#FFCDD2" : "#C8E6C9" }]}>
-          <MaterialIcons
-            name={data.ph < 6.5 || data.ph > 8.0 ? "warning" : "check-circle"}
-            size={24}
-            color={data.ph < 6.5 || data.ph > 8.0 ? "#D32F2F" : "#388E3C"}
-          />
-          <View style={styles.alertContent}>
-            <Text style={styles.alertTitle}>Estado del pH</Text>
-            <Text style={styles.alertText}>
-              {data.ph < 6.5 || data.ph > 8.0 ? "Fuera del rango óptimo" : "Dentro del rango óptimo"}
-            </Text>
-          </View>
-        </View>
-      </View>
 
       {/* Botones para modelos estadísticos - Solo usuarios institucionales */}
       {hasModelAccess && (
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.regressionButton} onPress={handleModeloRegresion}>
             <MaterialIcons name="trending-up" size={20} color="white" />
-            <Text style={styles.buttonText}>Modelo de Regresión Unificado</Text>
+            <Text style={styles.buttonText}>Modelo de Regresión + Von Bertalanffy</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.timeSeriesButton} onPress={handleModeloSeriesTemporales}>
@@ -407,7 +391,7 @@ export default function TanquesScreen({ navigation }: TanquesScreenProps = {}) {
           <MaterialIcons name={isGmailUser ? "visibility" : "lock"} size={24} color="#999" />
           <Text style={styles.restrictedText}>
             {isGmailUser
-              ? "Usuario Gmail: Solo visualización de gráficas y alertas"
+              ? "Acceso único a gráficas y alertas"
               : "Los modelos estadísticos requieren correo institucional"}
           </Text>
         </View>

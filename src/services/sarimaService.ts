@@ -423,7 +423,7 @@ export const sarimaTruchasService = {
     // Validar entrada con números robustos
     const diasValidos = validarNumero(dias, 1)
     if (diasValidos <= 0 || diasValidos > 1000) {
-      throw new Error("El número de días debe estar entre 1 y 1000")
+      throw new Error("El número de días debe estar entre 1 y 100")
     }
 
     const {
@@ -653,7 +653,7 @@ export const sarimaLechugasService = {
       console.log(`✅ SARIMA LECHUGAS: Resultado final validado:`, resultado)
       return resultado
     } catch (error) {
-      console.error("❌ SARIMA LECHUGAS: Error en realizarPrediccionSARIMA:", error)
+      console.error("❌ SARIMA LECHUGAS: Error en realizar Prediccion SARIMA:", error)
       if (error instanceof Error) {
         throw new Error(`Error en predicción SARIMA de lechugas: ${error.message}`)
       } else {

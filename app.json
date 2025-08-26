@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#2E7D32"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -38,10 +40,16 @@
         "backgroundColor": "#2E7D32"
       },
       "usesCleartextTraffic": true,
-      "networkSecurityConfig": "./network_security_config.xml"
+      "networkSecurityConfig": "./network_security_config.xml",
+      "package": "com.ferneyalexis.aquaponicmonitorfixed"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bfeb865f-c985-439b-a980-ea95a7939b8d"
+      }
     }
   }
 }

@@ -88,7 +88,7 @@ export default function CultivosScreen({ navigation }: CultivosScreenProps = {})
       const errorMessage = error instanceof Error ? error.message : String(error)
       Alert.alert(
         "Error de Conexión - Truchas",
-        `No se pudieron obtener los datos.\n\nDetalles del error:\n${errorMessage}\n\nVerifica:\n• Tu API esté corriendo en puerto 55839\n• La conexión de red\n• El firewall`,
+        `No se pudieron obtener los datos.\n\nDetalles del error:\n${errorMessage}\n\nVerifica:\n• Tu API esté corriendo\n• La conexión de red\n• El firewall`,
       )
     }
   }
@@ -305,7 +305,7 @@ export default function CultivosScreen({ navigation }: CultivosScreenProps = {})
             withHorizontalLines={true}
           />
           <View style={styles.chartFooter}>
-            <Text style={styles.chartSubtitle}>📈 Tendencia en tiempo real</Text>
+            <Text style={styles.chartSubtitle}>Temperatura ambiente</Text>
           </View>
         </View>
       )}
@@ -340,7 +340,7 @@ export default function CultivosScreen({ navigation }: CultivosScreenProps = {})
             withHorizontalLines={true}
           />
           <View style={styles.chartFooter}>
-            <Text style={styles.chartSubtitle}>💧 Monitoreo continuo</Text>
+            <Text style={styles.chartSubtitle}>Monitoreo continuo</Text>
           </View>
         </View>
       )}
@@ -375,7 +375,7 @@ export default function CultivosScreen({ navigation }: CultivosScreenProps = {})
             withHorizontalLines={true}
           />
           <View style={styles.chartFooter}>
-            <Text style={styles.chartSubtitle}>⚗️ Control de acidez</Text>
+            <Text style={styles.chartSubtitle}>Control de acidez</Text>
           </View>
         </View>
       )}
@@ -400,7 +400,7 @@ export default function CultivosScreen({ navigation }: CultivosScreenProps = {})
           <MaterialIcons name={isGmailUser ? "visibility" : "lock"} size={24} color="#999" />
           <Text style={styles.restrictedText}>
             {isGmailUser
-              ? "Usuario Gmail: Solo visualización de gráficas y alertas"
+              ? "Acceso único a gráficas y alertas"
               : "Los modelos estadísticos requieren correo institucional"}
           </Text>
         </View>

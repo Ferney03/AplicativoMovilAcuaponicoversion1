@@ -70,7 +70,7 @@ export default function PrediccionLechugasAvanzadaScreen({ navigation }: Predicc
     try {
       const dias = validarNumero(diasPrediccion, 0)
       if (dias <= 0 || dias > 1000) {
-        Alert.alert("Error", "Por favor ingresa un número válido de días (1-1000)")
+        Alert.alert("Error", "Por favor ingresa un número válido de días (1-100)")
         return
       }
 
@@ -156,22 +156,20 @@ export default function PrediccionLechugasAvanzadaScreen({ navigation }: Predicc
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>Modelo de Regresión Lineal</Text>
             <Text style={styles.infoText}>
-              Utiliza regresión lineal dual para predecir altura y área foliar basándose en TODOS los datos históricos
-              reales de la API.{"\n"}✅ Soporta predicciones hasta 1000 días{"\n"}🎯 Obtiene valores actuales REALES de
-              la API{"\n"}🛡️ Validación ultra robusta contra errores{"\n"}📊 Análisis estadístico completo
+              Utiliza regresión lineal múltiple con Von Bertalanffy para predecir altura y área foliar de las lechugas.{"\n"}📊 Análisis estadístico completo
             </Text>
           </View>
         </View>
 
         {/* Input para días de predicción */}
         <View style={styles.inputCard}>
-          <Text style={styles.inputLabel}>📅 Días para predicción de regresión (1-1000):</Text>
+          <Text style={styles.inputLabel}>📅 Días para predicción de regresión (1-100):</Text>
           <TextInput
             style={styles.input}
             value={diasPrediccion}
             onChangeText={setDiasPrediccion}
             keyboardType="numeric"
-            placeholder="Ej: 5, 30, 100, 365"
+            placeholder="Ej: 5, 30, 100"
             maxLength={4}
           />
           <TouchableOpacity
@@ -250,7 +248,6 @@ export default function PrediccionLechugasAvanzadaScreen({ navigation }: Predicc
             <View style={styles.qualityIndicator}>
               <Text style={styles.qualityText}>✅ Modelo de Regresión Lineal</Text>
               <Text style={styles.qualitySubtext}>🎯 Valores actuales obtenidos directamente de la API</Text>
-              <Text style={styles.qualitySubtext}>🛡️ Validación ultra robusta contra errores</Text>
               <Text style={styles.qualitySubtext}>📊 Análisis estadístico completo</Text>
             </View>
           </View>
@@ -327,10 +324,9 @@ export default function PrediccionLechugasAvanzadaScreen({ navigation }: Predicc
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>Metodología del Modelo de Regresión</Text>
             <Text style={styles.infoText}>
-              • Se obtienen TODOS los datos históricos de la API{"\n"}• Se aplica regresión lineal dual (altura + área)
-              {"\n"}• Se calculan coeficientes de determinación (R²){"\n"}• R² ≥ 75% indica buena predicción{"\n"}•
-              Soporta predicciones hasta 1000 días{"\n"}• Validación ultra robusta contra errores NaN{"\n"}• Obtiene
-              valores actuales REALES del último registro{"\n\n"}✅ Todos los datos provienen de tu API real
+              • Se obtienen TODOS los datos históricos{"\n"}• Se aplica regresión lineal dual (altura + área)
+              {"\n"}• Se calculan coeficientes de determinación (R²){"\n"}• Obtiene
+              valores actuales del último registro{"\n\n"}
             </Text>
           </View>
         </View>

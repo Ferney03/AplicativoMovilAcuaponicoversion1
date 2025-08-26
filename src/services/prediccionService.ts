@@ -598,10 +598,10 @@ export const prediccionLechugasService = {
       }
 
       console.log(
-        `🥬 LECHUGAS: Regresión usando TODOS los ${datos.alturas.length} datos para predicción de ${diasValidos} días`,
+        `🥬 LECHUGAS: Regresión usando todos los ${datos.alturas.length} datos para predicción de ${diasValidos} días`,
       )
       console.log(
-        `🎯 LECHUGAS: Valores actuales CONFIRMADOS: Altura=${datos.alturaActual}cm, Área=${datos.areaActual}cm²`,
+        `🎯 LECHUGAS: Valores actuales confirmados: Altura=${datos.alturaActual}cm, Área=${datos.areaActual}cm²`,
       )
 
       // Regresión para altura con validación ULTRA robusta
@@ -686,7 +686,7 @@ export const prediccionLechugasService = {
       console.log(`✅ LECHUGAS: Resultado final validado:`, resultado)
       return resultado
     } catch (error) {
-      console.error("❌ LECHUGAS: Error en realizarPrediccion:", error)
+      console.error("❌ LECHUGAS: Error en realizar Prediccion:", error)
       throw new Error(`Error en predicción de lechugas: ${error instanceof Error ? error.message : String(error)}`)
     }
   },
@@ -836,7 +836,7 @@ export const prediccionAvanzadaTruchasService = {
   },
 }
 
-// Servicio mejorado para predicción AVANZADA de lechugas usando endpoint diario - COMPLETAMENTE ARREGLADO
+// Servicio mejorado para predicción AVANZADA de lechugas usando endpoint diario
 export const prediccionAvanzadaLechugasService = {
   obtenerDatosHistoricos: async () => {
     try {

@@ -47,13 +47,12 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       const { usuario, actividades } = await authService.login(email, password)
 
       console.log("✅ Login exitoso:", usuario.nombre, usuario.apellido)
-      console.log("🎯 Actividades asignadas:", actividades.length)
 
       await login(usuario, actividades)
 
       Alert.alert(
         "✅ Bienvenido",
-        `Hola ${usuario.nombre} ${usuario.apellido}\n\nTienes acceso a ${actividades.length} actividades`,
+        `Hola ${usuario.nombre} ${usuario.apellido}\n\n¡Has iniciado sesión exitosamente!`,
       )
     } catch (error: any) {
       console.error("❌ Error en login:", error)

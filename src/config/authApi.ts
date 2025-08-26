@@ -8,10 +8,9 @@ const getAuthApiBaseUrl = () => {
   const isWeb = Constants.executionEnvironment === "storeClient" ? false : true
 
   if (isWeb && typeof window !== "undefined") {
-    return "http://localhost:7150" // ✅ PUERTO CORRECTO 7150
+    return "http://localhost:7150" // ✅ PUERTO CORRECTO 7150 CON HTTP
   } else {
-    // Para móvil, usar HTTP con la IP de tu servidor y puerto correcto
-    return "http://192.168.101.76:7150" // ✅ Usa tu IP real aquí
+    return "http://192.168.101.76:7150" // ✅ IP CORRECTA CON HTTP
   }
 }
 
@@ -19,14 +18,6 @@ export const AUTH_API_BASE_URL = getAuthApiBaseUrl()
 
 console.log(`🔐 Auth API Base URL configurada: ${AUTH_API_BASE_URL}`)
 console.log(`📱 Plataforma detectada: ${Platform.OS}`)
-
-// Endpoints de autenticación
-export const AUTH_ENDPOINTS = {
-  usuarios: `${AUTH_API_BASE_URL}/api/Usuario`,
-  upas: `${AUTH_API_BASE_URL}/api/Upa`,
-  actividades: `${AUTH_API_BASE_URL}/api/ListaActividades`,
-  asignaciones: `${AUTH_API_BASE_URL}/api/AsignacionActividad`,
-}
 
 // Función para encriptar contraseña con SHA-512 usando crypto-js (compatible con SQL Server HASHBYTES)
 export const encryptPassword = (password: string): string => {
@@ -41,13 +32,20 @@ export const encryptPassword = (password: string): string => {
   }
 }
 
-// Función simplificada para HTTP
+// Endpoints de autenticación
+export const AUTH_ENDPOINTS = {
+  usuarios: `${AUTH_API_BASE_URL}/api/Usuario`,
+  upas: `${AUTH_API_BASE_URL}/api/Upa`,
+  actividades: `${AUTH_API_BASE_URL}/api/ListaActividades`,
+  asignaciones: `${AUTH_API_BASE_URL}/api/AsignacionActividad`,
+}
+
+// Función simplificada para HTTPS
 const fetchWithErrorHandling = async (url: string, options: RequestInit = {}) => {
   try {
-    console.log(`🔄 Auth API Fetching (HTTP): ${url}`)
+    console.log(`🔄 Auth API Fetching (HTTPS): ${url}`)
     console.log(`📱 Platform: ${Platform.OS}`)
 
-    // Configuración simple para HTTP
     const fetchOptions: RequestInit = {
       ...options,
       headers: {
@@ -60,6 +58,7 @@ const fetchWithErrorHandling = async (url: string, options: RequestInit = {}) =>
     console.log("🔧 Fetch options:", {
       method: fetchOptions.method || "GET",
       headers: fetchOptions.headers,
+      body: fetchOptions.body ? "Present" : "None",
     })
 
     const response = await fetch(url, fetchOptions)
@@ -92,10 +91,9 @@ const fetchWithErrorHandling = async (url: string, options: RequestInit = {}) =>
   } catch (error: any) {
     console.error(`❌ Auth API Error fetching ${url}:`, error)
 
-    // Proporcionar información específica según el tipo de error
     if (error.message.includes("Network request failed") || error.message.includes("fetch")) {
       throw new Error(
-        `Error de conexión HTTP.\n\nPosibles causas:\n• API no está corriendo en ${url}\n• Firewall bloqueando HTTP\n• IP incorrecta\n• Puerto incorrecto (debería ser 7150)\n\nSolución:\n1. Verifica que la API esté corriendo: dotnet run\n2. Verifica la IP: ${url}\n3. Abre en navegador: ${url.replace("/api/Usuario", "/swagger")}`,
+        `Error de conexión HTTPS.\n\nPosibles causas:\n• API no está corriendo en ${url}\n• Certificado SSL inválido\n• IP incorrecta\n• Puerto incorrecto (debería ser 7150)\n\nSolución:\n1. Verifica que la API esté corriendo: dotnet run\n2. Verifica la IP: ${url}\n3. Abre en navegador: ${url.replace("/api/Usuario", "/swagger")}`,
       )
     }
 
@@ -109,7 +107,16 @@ const fetchWithErrorHandling = async (url: string, options: RequestInit = {}) =>
   }
 }
 
-// Interfaces para los datos
+// Interfaces para los datos - ACTUALIZADAS SEGÚN TU API
+export interface Upa {
+  idUpa: string // GUID en SQL Server
+  nombre: string
+  descripcion: string
+  latitud: number
+  longitud: number
+  estado: boolean
+}
+
 export interface Usuario {
   idUsuario: string // GUID en SQL Server
   nombre: string
@@ -118,16 +125,8 @@ export interface Usuario {
   contrasena: string
   estado: boolean
   upaId: string // GUID en SQL Server
+  upa: Upa | null // ✅ CAMPO QUE FALTABA SEGÚN TU API
   numIntentos: number
-}
-
-export interface Upa {
-  idUpa: string // GUID en SQL Server
-  nombre: string
-  descripcion: string
-  latitud: number
-  longitud: number
-  estado: boolean
 }
 
 export interface ListaActividades {
@@ -165,8 +164,14 @@ export const authService = {
     })
   },
 
-  // Actualizar usuario
-  updateUsuario: async (id: string, usuario: Partial<Usuario>): Promise<Usuario> => {
+  // Actualizar usuario - USANDO TU PUT EXISTENTE CORRECTAMENTE
+  updateUsuario: async (id: string, usuario: Usuario): Promise<Usuario> => {
+    console.log(`🔄 Actualizando usuario ${id} con PUT en tu API existente`)
+    console.log(`📝 Datos enviados:`, {
+      ...usuario,
+      contrasena: usuario.contrasena ? `${usuario.contrasena.substring(0, 20)}...` : "No change",
+    })
+
     return await fetchWithErrorHandling(`${AUTH_ENDPOINTS.usuarios}/${id}`, {
       method: "PUT",
       body: JSON.stringify(usuario),
@@ -252,13 +257,44 @@ export const authService = {
     }
   },
 
-  // Cambiar contraseña
+  // Cambiar contraseña - SOLO ACTUALIZA LA CONTRASEÑA
   cambiarContrasena: async (usuarioId: string, nuevaContrasena: string): Promise<void> => {
-    const contrasenaEncriptada = encryptPassword(nuevaContrasena)
-    await authService.updateUsuario(usuarioId, {
-      contrasena: contrasenaEncriptada,
-      numIntentos: 0, // Resetear intentos
+    console.log(`🔐 Cambiando SOLO la contraseña para usuario: ${usuarioId}`)
+
+    // 1. Obtener el usuario completo primero
+    const usuario = await authService.getUsuario(usuarioId)
+    console.log(`👤 Usuario obtenido:`, {
+      id: usuario.idUsuario,
+      correo: usuario.correo,
+      nombre: usuario.nombre,
     })
+
+    // 2. Encriptar la nueva contraseña
+    const contrasenaEncriptada = encryptPassword(nuevaContrasena)
+    console.log(`🔐 Nueva contraseña encriptada: ${contrasenaEncriptada.substring(0, 20)}...`)
+
+    // 3. Crear el objeto completo del usuario EXACTAMENTE como lo devuelve tu API
+    const usuarioActualizado: Usuario = {
+      idUsuario: usuario.idUsuario,
+      nombre: usuario.nombre,
+      apellido: usuario.apellido,
+      correo: usuario.correo,
+      contrasena: contrasenaEncriptada, // ✅ SOLO ESTO CAMBIA
+      estado: usuario.estado,
+      upaId: usuario.upaId,
+      upa: usuario.upa, // ✅ MANTENER EL CAMPO UPA
+      numIntentos: 0, // ✅ RESETEAR INTENTOS
+    }
+
+    console.log(`🔄 Enviando usuario completo con nueva contraseña:`, {
+      ...usuarioActualizado,
+      contrasena: `${contrasenaEncriptada.substring(0, 20)}...`,
+    })
+
+    // 4. Actualizar con el objeto completo
+    await authService.updateUsuario(usuarioId, usuarioActualizado)
+
+    console.log(`✅ Contraseña actualizada exitosamente`)
   },
 
   // Función de prueba para verificar hash
@@ -266,21 +302,20 @@ export const authService = {
     return encryptPassword(password)
   },
 
-  // Función para probar conectividad HTTP
+  // Función para probar conectividad HTTPS
   testConnection: async (): Promise<{ success: boolean; details: string }> => {
     try {
-      console.log(`🔍 Testing HTTP connection to: ${AUTH_ENDPOINTS.usuarios}`)
+      console.log(`🔍 Testing HTTPS connection to: ${AUTH_ENDPOINTS.usuarios}`)
       console.log(`📱 Platform: ${Platform.OS}`)
 
       const startTime = Date.now()
 
-      // Usar la misma función de fetch con manejo de errores
       const data = await fetchWithErrorHandling(AUTH_ENDPOINTS.usuarios)
 
       const endTime = Date.now()
       const responseTime = endTime - startTime
 
-      console.log(`📡 HTTP Connection test successful`)
+      console.log(`📡 HTTPS Connection test successful`)
       console.log(`⏱️ Response time: ${responseTime}ms`)
 
       const details = `✅ Status: 200 OK\n⏱️ Tiempo de respuesta: ${responseTime}ms\n📱 Plataforma: ${Platform.OS}\n👥 Usuarios encontrados: ${Array.isArray(data) ? data.length : "N/A"}\n🌐 URL: ${AUTH_ENDPOINTS.usuarios}`
@@ -290,7 +325,7 @@ export const authService = {
         details: details,
       }
     } catch (error: any) {
-      console.error("❌ HTTP Connection test failed:", error)
+      console.error("❌ HTTPS Connection test failed:", error)
 
       const errorDetails = `❌ Error: ${error.message}\n📱 Plataforma: ${Platform.OS}\n🌐 URL: ${AUTH_ENDPOINTS.usuarios}\n\n🔧 Verifica:\n• API corriendo: dotnet run\n• Puerto correcto: 7150\n• Swagger: ${AUTH_API_BASE_URL}/swagger`
 

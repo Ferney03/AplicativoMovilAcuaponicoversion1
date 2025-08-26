@@ -66,7 +66,7 @@ export default function PrediccionTruchasSARIMAScreen({ navigation }: Prediccion
   const realizarPrediccion = async () => {
     const dias = validarNumero(diasPrediccion, 0)
     if (dias <= 0 || dias > 1000) {
-      Alert.alert("Error", "Por favor ingresa un número válido de días (1-1000)")
+      Alert.alert("Error", "Por favor ingresa un número válido de días (1-100)")
       return
     }
 
@@ -143,21 +143,21 @@ export default function PrediccionTruchasSARIMAScreen({ navigation }: Prediccion
             <Text style={styles.infoText}>
               📈 SARIMA(p,d,q)(P,D,Q)[s]: Modelo autorregresivo integrado de media móvil estacional{"\n"}🔄 Detecta
               patrones estacionales y tendencias{"\n"}📊 Ideal para predicciones a corto-medio plazo{"\n"}🐟
-              Especializado para crecimiento de truchas{"\n"}✅ Usa TODOS los datos históricos disponibles{"\n"}🎯
-              Soporta predicciones hasta 1000 días{"\n"}🛡️ Validación robusta contra errores NaN
+              Especializado para crecimiento de truchas{"\n"}✅ Usa los datos históricos disponibles{"\n"}🎯
+              Soporta predicciones hasta 100 días{"\n"}
             </Text>
           </View>
         </View>
 
         {/* Input para días de predicción */}
         <View style={styles.inputCard}>
-          <Text style={styles.inputLabel}>📅 Días para predicción (1-1000):</Text>
+          <Text style={styles.inputLabel}>📅 Días para predicción (1-100):</Text>
           <TextInput
             style={styles.input}
             value={diasPrediccion}
             onChangeText={setDiasPrediccion}
             keyboardType="numeric"
-            placeholder="Ej: 7, 30, 100, 365"
+            placeholder="Ej: 7, 30, 100"
             maxLength={4}
           />
           <TouchableOpacity
@@ -303,8 +303,7 @@ export default function PrediccionTruchasSARIMAScreen({ navigation }: Prediccion
                   {"\n"}• Frecuencia original: {resultado.metadata.frecuenciaOriginal}
                   {"\n"}• Total de días disponibles: {resultado.metadata.totalDias}
                   {"\n"}• Registros por día: {resultado.metadata.registrosPorDia?.toLocaleString()}
-                  {"\n"}✅ Usando TODOS los datos para máxima precisión
-                  {"\n"}🛡️ Validación robusta contra errores NaN
+                  {"\n"}✅ Usando todos los datos para máxima precisión
                 </Text>
               </View>
             )}
@@ -340,7 +339,7 @@ export default function PrediccionTruchasSARIMAScreen({ navigation }: Prediccion
               bezier
               style={styles.chart}
             />
-            <Text style={styles.chartSubtitle}>Últimos 20 días (usando TODOS los datos para SARIMA)</Text>
+            <Text style={styles.chartSubtitle}>Últimos 20 días</Text>
           </View>
         )}
       </ScrollView>

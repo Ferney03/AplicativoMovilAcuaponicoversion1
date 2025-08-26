@@ -218,15 +218,15 @@ export default function ReportesScreen({ navigation }: ReportesScreenProps) {
 
         <div class="footer">
             <strong>Generado por: Sistema Móvil Monitor Acuapónico</strong><br>
-            Universidad de Cundinamarca - Facultad de Ingeniería<br>
-            📧 Contacto: sistemas.acuaponicos@ucundinamarca.edu.co
+            Universidad de Cundinamarca sede Facatativá - Facultad de Ingeniería<br>
+            📧 Contacto: sistemamoviludec@outlook.com
         </div>
     </body>
     </html>
     `
   }
 
-  // Función para generar datos de gráficas - MODIFICADA
+  // Función para generar datos de gráficas
   const generarDatosGraficas = (datos: any[], tipo: "cultivos" | "tanques") => {
     const labels = datos.map((d) => d.Fecha)
 
@@ -297,7 +297,7 @@ export default function ReportesScreen({ navigation }: ReportesScreenProps) {
     }
   }
 
-  // Función para calcular estadísticas - MODIFICADA
+  // Función para calcular estadísticas
   const calcularEstadisticas = (datos: any[], headers: string[], tipo: "cultivos" | "tanques") => {
     const stats: any = {}
 
@@ -401,7 +401,6 @@ export default function ReportesScreen({ navigation }: ReportesScreenProps) {
       // Obtener datos reales de la API
       const datosActuales = await lechugasService.getLatestValues()
 
-      // Simular histórico completo con más datos (90 días)
       const datosHistoricos = []
       const ahora = new Date()
 
@@ -454,7 +453,7 @@ export default function ReportesScreen({ navigation }: ReportesScreenProps) {
         fileUri = FileSystem.documentDirectory + fileName
         await FileSystem.writeAsStringAsync(fileUri, csvContent)
       } else {
-        // Para PDF usar datos completos para gráficas pero tabla sin crecimiento
+        // Para PDF usar datos completos para gráficas
         const htmlContent = generarHTML(
           datosHistoricos.map((d) => ({
             Fecha: d.Fecha,
@@ -793,7 +792,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     marginBottom: 15,
-    shadowColor: "#000",
+    shadowColor: "#171717ff",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -844,7 +843,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     marginTop: 10,
-    shadowColor: "#000",
+    shadowColor: "#1a1919ff",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,

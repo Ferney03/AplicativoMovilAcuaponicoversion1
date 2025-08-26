@@ -38,7 +38,7 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
     try {
       const dias = Number.parseInt(diasPrediccion)
       if (isNaN(dias) || dias <= 0 || dias > 1000) {
-        Alert.alert("Error", "Por favor ingresa un número válido de días (1-1000)")
+        Alert.alert("Error", "Por favor ingresa un número válido de días (1-100)")
         return
       }
 
@@ -113,10 +113,9 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
           <View style={styles.infoContent}>
             <Text style={styles.infoTitle}>Modelos Biológicos Avanzados</Text>
             <Text style={styles.infoText}>
-              Combina regresión lineal con el modelo de von Bertalanffy para predicciones precisas del crecimiento de
-              truchas. Considera variables ambientales como temperatura, pH, conductividad y oxígeno.{"\n"}✅ Regresión
-              lineal para tendencias{"\n"}🧬 von Bertalanffy para crecimiento biológico{"\n"}🌡️ Variables ambientales
-              integradas{"\n"}📊 Datos de referencia científica
+              Combina regresión lineal con el modelo de Von Bertalanffy para predicciones del crecimiento de
+              truchas. Considera variables ambientales como temperatura, pH, y conductividad.{"\n"}
+              🌡️ Variables ambientales integradas{"\n"}📊 Datos de referencia científica
             </Text>
           </View>
         </View>
@@ -249,23 +248,9 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
               bezier
               style={styles.chart}
             />
-            <Text style={styles.chartSubtitle}>Últimos días analizados (modelos avanzados)</Text>
+            <Text style={styles.chartSubtitle}>Últimos días analizados</Text>
           </View>
         )}
-
-        {/* Información adicional */}
-        <View style={styles.infoCard}>
-          <MaterialIcons name="info" size={24} color="#FF9800" />
-          <View style={styles.infoContent}>
-            <Text style={styles.infoTitle}>Metodología de Modelos Avanzados</Text>
-            <Text style={styles.infoText}>
-              • Regresión lineal para tendencias generales{"\n"}• von Bertalanffy para crecimiento biológico realista
-              {"\n"}• Integración de variables ambientales{"\n"}• Calibración con datos de referencia científica{"\n"}•
-              R² ≥ 75% indica buena predicción{"\n"}• L∞ representa la longitud máxima teórica{"\n"}• Considera
-              temperatura, pH, conductividad y oxígeno{"\n\n"}🧬 Modelos basados en biología de truchas
-            </Text>
-          </View>
-        </View>
       </ScrollView>
     </View>
   )

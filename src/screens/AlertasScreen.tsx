@@ -23,17 +23,17 @@ interface AlertasScreenProps {
   navigation: any
 }
 
-// Límites SOLO para variables ambientales (NO crecimiento ni área foliar)
+// Límites ACTUALIZADOS según especificaciones
 const LIMITES_TRUCHAS = {
-  temperatura: { min: 10, max: 18 }, // °C
-  conductividad: { min: 150, max: 300 }, // μS/cm
-  ph: { min: 6.5, max: 8.0 },
+  temperatura: { min: 9, max: 21 }, // °C
+  conductividad: { min: 250, max: 850 }, // μS/cm
+  ph: { min: 6.5, max: 8.8 },
 }
 
 const LIMITES_LECHUGAS = {
-  temperatura: { min: 18, max: 25 }, // °C
-  humedad: { min: 60, max: 85 }, // %
-  ph: { min: 5.5, max: 6.5 },
+  temperatura: { min: 15, max: 28 }, // °C
+  humedad: { min: 50, max: 85 }, // %
+  ph: { min: 5.5, max: 7.4 },
 }
 
 export default function AlertasScreen({ navigation }: AlertasScreenProps) {
@@ -55,7 +55,7 @@ export default function AlertasScreen({ navigation }: AlertasScreenProps) {
       setLoading(true)
       setError(null)
 
-      console.log("🚨 Cargando alertas reales desde la API...")
+      console.log("🚨 Cargando alertas desde la API con límites actualizados...")
 
       const alertasGeneradas: AlertaAutomatica[] = []
 
@@ -124,12 +124,12 @@ export default function AlertasScreen({ navigation }: AlertasScreenProps) {
         console.error("❌ Error obteniendo datos de truchas:", truchasError)
       }
 
-      // Obtener datos actuales de lechugas - SOLO VARIABLES AMBIENTALES
+      // Obtener datos actuales de lechugas
       try {
         const datosLechugas = await lechugasService.getLatestValues()
         console.log("🥬 Datos lechugas obtenidos:", datosLechugas)
 
-        // Verificar SOLO variables ambientales de lechugas (NO altura ni área foliar)
+        // Verificar SOLO variables ambientales de lechugas 
         const verificarLechugas = [
           {
             key: "temperatura",
@@ -271,7 +271,11 @@ Fecha y hora: ${alerta.timestamp}
 
 Descripción: ${alerta.descripcion}
 
-⚠️ Recomendación: Revisar inmediatamente el sistema ${alerta.modulo === "cultivos" ? "de cultivos" : "de tanques"}.`,
+⚠️ Recomendación: Revisar inmediatamente el sistema ${alerta.modulo === "cultivos" ? "de cultivos" : "de tanques"}.
+
+📊 LÍMITES:
+🐟 Truchas: T(9-21°C), pH(6.5-8.8), C(250-850μS/cm)
+🥬 Lechugas: T(15-28°C), pH(5.5-7.4), H(50-85%)`,
       [
         {
           text: "Marcar como Revisada",
@@ -286,7 +290,7 @@ Descripción: ${alerta.descripcion}
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#FF9800" />
-        <Text style={styles.loadingText}>Analizando variables ambientales...</Text>
+        <Text style={styles.loadingText}>Analizando variables ambientales con límites actualizados...</Text>
       </View>
     )
   }
@@ -312,6 +316,13 @@ Descripción: ${alerta.descripcion}
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Información de límites */}
+      <View style={styles.limitsContainer}>
+        <Text style={styles.limitsTitle}>📊 Límites Actualizados:</Text>
+        <Text style={styles.limitsText}>🐟 Truchas: T(9-21°C), pH(6.5-8.8), C(250-850μS/cm)</Text>
+        <Text style={styles.limitsText}>🥬 Lechugas: T(15-28°C), pH(5.5-7.4), H(50-85%)</Text>
+      </View>
 
       {/* Barra de búsqueda */}
       <View style={styles.searchContainer}>
@@ -461,7 +472,7 @@ Descripción: ${alerta.descripcion}
                 ? "Verifica la conexión con la API"
                 : searchText
                   ? "Intenta con otros términos de búsqueda"
-                  : "pH, temperatura, conductividad y humedad están en rangos óptimos"}
+                  : "Todas las variables están dentro de los rangos actualizados"}
             </Text>
           </View>
         )}
@@ -485,6 +496,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: "#FF9800",
+    textAlign: "center",
   },
   header: {
     backgroundColor: "#FF9800",
@@ -530,6 +542,26 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+  },
+  limitsContainer: {
+    backgroundColor: "#E8F5E8",
+    margin: 20,
+    marginBottom: 10,
+    padding: 15,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: "#4CAF50",
+  },
+  limitsTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#2E7D32",
+    marginBottom: 5,
+  },
+  limitsText: {
+    fontSize: 12,
+    color: "#388E3C",
+    marginBottom: 2,
   },
   searchContainer: {
     flexDirection: "row",
