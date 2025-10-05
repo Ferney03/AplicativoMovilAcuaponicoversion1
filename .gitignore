@@ -25,6 +25,6 @@ yarn-error.log*
 next-env.d.ts
 
 .expo/
-sonar-project.properties
-eas.json
-.scannerwork
+/sonar-project.properties
+
+/.scannerwork
