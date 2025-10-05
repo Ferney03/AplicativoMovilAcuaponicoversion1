@@ -9,11 +9,12 @@ const getApiBaseUrl = () => {
   const isWeb = Constants.executionEnvironment === "storeClient" ? false : true
 
   if (isWeb && typeof window !== "undefined") {
-    // En web browser, usar HTTP con puerto 55839
-    return "http://localhost:55839"
+    // En web browser, usar HTTP 
+    return "http://localhost:5100"
   } else {
-    // En móvil, usar HTTP con puerto 55839
-    return "http://192.168.101.76:55839"
+    // En móvil, usar HTTP 
+    return "http://192.168.101.75:5100"
+
   }
 }
 

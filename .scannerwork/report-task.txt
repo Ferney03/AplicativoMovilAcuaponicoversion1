@@ -1,0 +1,7 @@
+organization=ferney03
+projectKey=aquaponic-monitor
+serverUrl=https://sonarcloud.io
+serverVersion=8.0.0.67857
+dashboardUrl=https://sonarcloud.io/dashboard?id=aquaponic-monitor
+ceTaskId=AZmY75yTDONcU4zLZTbi
+ceTaskUrl=https://sonarcloud.io/api/ce/task?id=AZmY75yTDONcU4zLZTbi

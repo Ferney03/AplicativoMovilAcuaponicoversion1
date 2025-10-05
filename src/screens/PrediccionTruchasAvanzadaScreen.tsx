@@ -68,14 +68,7 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
           `📈 REGRESIÓN LINEAL:\n` +
           `• Predicción: ${resultado.longitudPrediccionLineal.toFixed(2)} cm\n` +
           `• Crecimiento: +${resultado.crecimientoEsperadoLineal.toFixed(2)} cm\n` +
-          `• Precisión: ${(resultado.r2Lineal * 100).toFixed(1)}%\n\n` +
-          `🧬 VON BERTALANFFY:\n` +
-          `• Predicción: ${resultado.longitudPrediccionVB.toFixed(2)} cm\n` +
-          `• Crecimiento: +${resultado.crecimientoEsperadoVB.toFixed(2)} cm\n` +
-          `• Precisión: ${(resultado.r2VB * 100).toFixed(1)}%\n` +
-          `• L∞: ${resultado.L_infinito.toFixed(1)} cm\n\n` +
-          `📋 Días analizados: ${resultado.totalRegistros}\n` +
-          `🎂 Edad estimada: ${resultado.edadEstimadaMeses.toFixed(1)} meses`,
+          `• Precisión: ${(resultado.r2Lineal * 100).toFixed(1)}%\n\n`
       )
     } catch (error) {
       console.error("Error en predicción:", error)
@@ -180,28 +173,6 @@ export default function PrediccionTruchasAvanzadaScreen({ navigation }: Predicci
               <Text style={styles.resultLabel}>Precisión (R²):</Text>
               <Text style={[styles.resultValue, { color: getCalidadModelo(resultado.r2Lineal).color }]}>
                 {(resultado.r2Lineal * 100).toFixed(1)}% {getCalidadModelo(resultado.r2Lineal).emoji}
-              </Text>
-            </View>
-
-            <Text style={[styles.sectionTitle, { marginTop: 15 }]}>🧬 VON BERTALANFFY</Text>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Predicción ({resultado.diasPrediccion} días):</Text>
-              <Text style={styles.resultValue}>{resultado.longitudPrediccionVB.toFixed(2)} cm</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Crecimiento Esperado:</Text>
-              <Text style={[styles.resultValue, { color: "#4CAF50" }]}>
-                +{resultado.crecimientoEsperadoVB.toFixed(2)} cm
-              </Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Longitud Máxima (L∞):</Text>
-              <Text style={styles.resultValue}>{resultado.L_infinito.toFixed(1)} cm</Text>
-            </View>
-            <View style={styles.resultRow}>
-              <Text style={styles.resultLabel}>Precisión (R²):</Text>
-              <Text style={[styles.resultValue, { color: getCalidadModelo(resultado.r2VB).color }]}>
-                {(resultado.r2VB * 100).toFixed(1)}% {getCalidadModelo(resultado.r2VB).emoji}
               </Text>
             </View>
 

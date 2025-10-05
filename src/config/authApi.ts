@@ -8,9 +8,9 @@ const getAuthApiBaseUrl = () => {
   const isWeb = Constants.executionEnvironment === "storeClient" ? false : true
 
   if (isWeb && typeof window !== "undefined") {
-    return "http://localhost:7150" // ✅ PUERTO CORRECTO 7150 CON HTTP
+    return "http://localhost:7150" // Puerto 7150 para HTTPS local en web
   } else {
-    return "http://192.168.101.76:7150" // ✅ IP CORRECTA CON HTTP
+    return "http://192.168.101.75:7150" // Puerto 7150 para HTTPS local en móvil
   }
 }
 
